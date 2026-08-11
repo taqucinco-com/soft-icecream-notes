@@ -27,12 +27,22 @@ class MemoEdit extends _$MemoEdit {
         metadata.longitude!,
       );
     }
-    state = state.copyWith(
+    // copyWithの`?? this.value`パターンでは新しい写真にExif情報が無い場合に
+    // 前の写真の位置情報・日付が残ってしまうため、ここでは明示的に全フィールドを再構築する。
+    state = MemoEditState(
       photoPath: mockPhotoPath,
       eatenDate: metadata.capturedAt,
       latitude: metadata.latitude,
       longitude: metadata.longitude,
       storeCandidates: candidates,
+      storeName: state.storeName,
+      storePlaceId: state.storePlaceId,
+      isManualStoreEntry: state.isManualStoreEntry,
+      servingMachine: state.servingMachine,
+      impressions: state.impressions,
+      tasteRating: state.tasteRating,
+      isSaving: state.isSaving,
+      isSaved: state.isSaved,
     );
   }
 
@@ -44,6 +54,7 @@ class MemoEdit extends _$MemoEdit {
     state = state.copyWith(
       storeName: candidate.name,
       storePlaceId: candidate.placeId,
+      isManualStoreEntry: false,
     );
   }
 
