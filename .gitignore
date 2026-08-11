@@ -121,3 +121,6 @@ app.*.symbols
 
 # FVM Version Cache
 **/.fvm/
+
+# Claude
+.claude/.mcp.json
