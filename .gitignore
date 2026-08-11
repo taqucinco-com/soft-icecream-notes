@@ -123,4 +123,4 @@ app.*.symbols
 **/.fvm/
 
 # Claude
-./claude/.mcp.json
+.claude/.mcp.json
