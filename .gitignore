@@ -122,5 +122,14 @@ app.*.symbols
 # FVM Version Cache
 **/.fvm/
 
+# Track pubspec.lock for reproducible Flutter app builds (overrides the blanket *.lock rule above)
+!mobile/pubspec.lock
+
+# Ad-hoc verification screenshots (adb/simulator captures during manual testing)
+# Image files are ignored; README.md files documenting each directory's purpose stay tracked.
+.claude/screenshots/**/*.png
+.claude/screenshots/**/*.jpg
+.claude/screenshots/**/*.jpeg
+
 # Claude
 .claude/.mcp.json

@@ -35,7 +35,7 @@
 | ルーティング | `go_router`（`StatefulShellRoute`） | ボトムナビゲーションのタブごとに画面スタックを保持しつつ、宣言的にモーダル遷移も扱える |
 | プロフィール保存 | `shared_preferences` | ニックネーム・アイコンパスは単一レコードのみで、SQLによる検索・フィルタが不要なため |
 | アプリバージョン取得 | `package_info_plus` | ビルド設定からアプリバージョンを取得する標準的な手段 |
-| DI（依存性注入） | Riverpod（`riverpod_generator`の`@riverpod`） | 状態管理とDIを1つの仕組みに統一できる。2026年時点でもRiverpod単体でのDIが主流であり、`get_it`/`injectable`は不採用（参考: [live4inc/magma-app](https://github.com/live4inc/magma-app)） |
+| DI（依存性注入） | Riverpod（`riverpod_generator`の`@riverpod`）。`flutter_riverpod`/`riverpod`は`3.3.2`に固定 | 状態管理とDIを1つの仕組みに統一できる。2026年時点でもRiverpod単体でのDIが主流であり、`get_it`/`injectable`は不採用（参考: [live4inc/magma-app](https://github.com/live4inc/magma-app)）。`riverpod`3.4系は本実装時点で`riverpod_generator`が未追従のため、両者互換の`3.3.2`系に固定した |
 | テストダブル | `mocktail` | コード生成不要でループエンジニアリングの反復速度を落とさないため、`mockito`（要build_runner）より優先 |
 
 いずれもAPIキー・課金が発生しうる選択（Google Places API, Google Maps）はユーザー承認済み。
