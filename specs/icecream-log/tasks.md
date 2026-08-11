@@ -51,11 +51,11 @@
   - 検証: `ProviderScope(overrides: [...])`で`image_picker`/`memoEditProvider`をフェイクに差し替え、Exifありの場合は日付が自動表示され、Exifなしの場合は手動入力欄が表示されることをWidgetテストで確認する。
 - [ ] T15: `StoreCandidatePicker`を実装し`MemoEditScreen`に組み込む。フォーム内インラインの候補チップ（候補1・候補2・手動で入力）として表示し、位置情報が無い場合の手動入力にも対応する。（REQ-2, Figma: 03_メモ作成編集 node-id 2:4）— 依存: T14
   - 検証: フェイクの`StoreSearchRepository`が返す候補一覧から選択できること、位置情報が無い場合は手動入力欄が表示されることをWidgetテストで確認する。
-- [ ] T16: `MemoEditScreen`にサービングマシンの選択UI（事前定義リスト＋自由入力）を追加する。（REQ-5）— 依存: T14
+- [ ] T16: `MemoEditScreen`にサービングマシンの選択UI（事前定義リスト＋自由入力）を追加する。（REQ-5, Figma: 03_メモ作成編集 node-id 2:4）— 依存: T14
   - 検証: 事前定義リストからの選択と自由入力の両方が`Memo.servingMachine`に反映されることをWidgetテストで確認する。
-- [ ] T17: `ImpressionListEditor`を実装し、`MemoEditScreen`に組み込む（感想の箇条書き追加・編集・削除）。（REQ-6）— 依存: T14
+- [ ] T17: `ImpressionListEditor`を実装し、`MemoEditScreen`に組み込む（感想の箇条書き追加・編集・削除）。（REQ-6, Figma: 03_メモ作成編集 node-id 2:4）— 依存: T14
   - 検証: 追加・編集・削除の操作でリストの内容が期待通り変化することをWidgetテストで確認する。
-- [ ] T18: `MemoEditScreen`に5軸評価（口当たり・素材の活かし方・個性的・フレーバーの良さ・温度管理、各1〜5）の入力UIを追加する。（REQ-7）— 依存: T14
+- [ ] T18: `MemoEditScreen`に5軸評価（口当たり・素材の活かし方・個性的・フレーバーの良さ・温度管理、各1〜5）の入力UIを追加する。（REQ-7, Figma: 03_メモ作成編集 node-id 2:4）— 依存: T14
   - 検証: 各軸の入力操作が`Memo.tasteRating`の対応する値に反映されることをWidgetテストで確認する。
 
 ## presentation層（メモ一覧・地図）
