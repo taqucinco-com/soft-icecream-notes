@@ -22,3 +22,8 @@
 ## 言語ルール
 
 コードレビューコメントを含め、Claude Codeが生成する説明文・コメントはすべて日本語で書くこと。コード自体の識別子（変数名・関数名等）は対象外。
+
+## Dartコーディングスタイル (mobile/)
+
+- 型が文脈から推論できる場合は [dot shorthand構文](https://dart.dev/language/dot-shorthands)（`ColorScheme.fromSeed(...)` ではなく `.fromSeed(...)` のように書く記法。Dart 3.10以降の言語機能）を積極的に使う。コンストラクタ呼び出し・static member・enum値のいずれでも使用可。
+- これはコンパイルエラーではなく意図したスタイルなので、コードレビューで指摘しないこと。

@@ -103,13 +103,20 @@ class MemoEdit extends _$MemoEdit {
       eatenDate: state.eatenDate,
       latitude: state.latitude,
       longitude: state.longitude,
-      storeName: state.storeName,
+      storeName: _normalizeToNull(state.storeName),
       storePlaceId: state.storePlaceId,
-      servingMachine: state.servingMachine,
+      servingMachine: _normalizeToNull(state.servingMachine),
       impressions: state.impressions,
       tasteRating: state.tasteRating,
     );
     await ref.read(saveMemoUseCaseProvider)(memo);
     state = state.copyWith(isSaving: false, isSaved: true);
+  }
+
+  /// 未入力の自由入力欄（空文字）が空表示のまま永続化されるのを防ぐため、
+  /// トリムして空ならnullに正規化する。
+  String? _normalizeToNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 }
