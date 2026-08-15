@@ -21,11 +21,18 @@ class SettingsScreen extends ConsumerWidget {
         data: (profile) => _SettingsContent(
           profile: profile,
           appVersion: appVersion,
-          onNicknameChanged: (nickname) {
-            ref
-                .read(saveProfileUseCaseProvider)(
-                  profile.copyWith(nickname: nickname),
+          onNicknameChanged: (nickname) async {
+            try {
+              await ref.read(saveProfileUseCaseProvider)(
+                profile.copyWith(nickname: nickname),
+              );
+            } catch (error) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('ニックネームの保存に失敗しました: $error')),
                 );
+              }
+            }
           },
           onChangeIconTap: () {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -68,6 +75,13 @@ class _SettingsContentState extends State<_SettingsContent> {
     super.dispose();
   }
 
+  void _submitNickname() {
+    final trimmed = _controller.text.trim();
+    if (trimmed != widget.profile.nickname) {
+      widget.onNicknameChanged(trimmed);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -103,8 +117,8 @@ class _SettingsContentState extends State<_SettingsContent> {
             isDense: true,
             border: OutlineInputBorder(),
           ),
-          onSubmitted: widget.onNicknameChanged,
-          onTapOutside: (_) => widget.onNicknameChanged(_controller.text),
+          onSubmitted: (_) => _submitNickname(),
+          onTapOutside: (_) => _submitNickname(),
         ),
         const SizedBox(height: 24),
         Row(

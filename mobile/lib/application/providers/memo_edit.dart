@@ -27,12 +27,22 @@ class MemoEdit extends _$MemoEdit {
         metadata.longitude!,
       );
     }
-    state = state.copyWith(
+    // copyWithの`?? this.value`パターンでは新しい写真にExif情報が無い場合に
+    // 前の写真の位置情報・日付が残ってしまうため、ここでは明示的に全フィールドを再構築する。
+    state = MemoEditState(
       photoPath: mockPhotoPath,
       eatenDate: metadata.capturedAt,
       latitude: metadata.latitude,
       longitude: metadata.longitude,
       storeCandidates: candidates,
+      storeName: state.storeName,
+      storePlaceId: state.storePlaceId,
+      isManualStoreEntry: state.isManualStoreEntry,
+      servingMachine: state.servingMachine,
+      impressions: state.impressions,
+      tasteRating: state.tasteRating,
+      isSaving: state.isSaving,
+      isSaved: state.isSaved,
     );
   }
 
@@ -44,6 +54,7 @@ class MemoEdit extends _$MemoEdit {
     state = state.copyWith(
       storeName: candidate.name,
       storePlaceId: candidate.placeId,
+      isManualStoreEntry: false,
     );
   }
 
@@ -92,13 +103,20 @@ class MemoEdit extends _$MemoEdit {
       eatenDate: state.eatenDate,
       latitude: state.latitude,
       longitude: state.longitude,
-      storeName: state.storeName,
+      storeName: _normalizeToNull(state.storeName),
       storePlaceId: state.storePlaceId,
-      servingMachine: state.servingMachine,
+      servingMachine: _normalizeToNull(state.servingMachine),
       impressions: state.impressions,
       tasteRating: state.tasteRating,
     );
     await ref.read(saveMemoUseCaseProvider)(memo);
     state = state.copyWith(isSaving: false, isSaved: true);
+  }
+
+  /// 未入力の自由入力欄（空文字）が空表示のまま永続化されるのを防ぐため、
+  /// トリムして空ならnullに正規化する。
+  String? _normalizeToNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 }

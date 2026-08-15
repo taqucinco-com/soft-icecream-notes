@@ -5,13 +5,45 @@ import '../../../application/providers/memo_edit.dart';
 
 /// Figma 03フレームの「お店」欄。フォーム内インラインの候補チップとして表示し、
 /// 「手動で入力」を選ぶと自由入力欄に切り替わる（独立したダイアログ/シートにはしない）。
-class StoreCandidatePicker extends ConsumerWidget {
+class StoreCandidatePicker extends ConsumerStatefulWidget {
   const StoreCandidatePicker({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StoreCandidatePicker> createState() =>
+      _StoreCandidatePickerState();
+}
+
+class _StoreCandidatePickerState extends ConsumerState<StoreCandidatePicker> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(
+      text: ref.read(memoEditProvider).storeName,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(memoEditProvider);
     final notifier = ref.read(memoEditProvider.notifier);
+
+    // ユーザーの入力によるものではなく、外部要因（手動入力への切り替え等）で
+    // storeNameが変わった場合のみコントローラを同期する。
+    final storeName = state.storeName ?? '';
+    if (state.isManualStoreEntry && _controller.text != storeName) {
+      _controller.value = TextEditingValue(
+        text: storeName,
+        selection: TextSelection.collapsed(offset: storeName.length),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -25,10 +57,7 @@ class StoreCandidatePicker extends ConsumerWidget {
               border: OutlineInputBorder(),
               hintText: '店名を入力',
             ),
-            controller: TextEditingController(text: state.storeName)
-              ..selection = TextSelection.collapsed(
-                offset: state.storeName?.length ?? 0,
-              ),
+            controller: _controller,
             onChanged: notifier.setStoreName,
           )
         else

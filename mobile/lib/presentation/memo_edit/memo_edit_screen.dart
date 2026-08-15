@@ -103,14 +103,47 @@ class _PhotoPicker extends StatelessWidget {
   }
 }
 
-class _ServingMachinePicker extends StatelessWidget {
+class _ServingMachinePicker extends StatefulWidget {
   const _ServingMachinePicker({required this.selected, required this.onSelected});
 
   final String? selected;
   final ValueChanged<String> onSelected;
 
   @override
+  State<_ServingMachinePicker> createState() => _ServingMachinePickerState();
+}
+
+class _ServingMachinePickerState extends State<_ServingMachinePicker> {
+  late final TextEditingController _controller;
+
+  bool get _isCustom =>
+      widget.selected != null &&
+      !ServingMachine.presetValues.contains(widget.selected);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.selected);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final selected = widget.selected ?? '';
+    // ユーザーの入力によるものではなく、外部要因（プリセット選択やチップタップ等）で
+    // 値が変わった場合のみコントローラを同期する。
+    if (_isCustom && _controller.text != selected) {
+      _controller.value = TextEditingValue(
+        text: selected,
+        selection: TextSelection.collapsed(offset: selected.length),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -123,17 +156,28 @@ class _ServingMachinePicker extends StatelessWidget {
             for (final machine in ServingMachine.presetValues)
               ChoiceChip(
                 label: Text(machine),
-                selected: selected == machine,
-                onSelected: (_) => onSelected(machine),
+                selected: widget.selected == machine,
+                onSelected: (_) => widget.onSelected(machine),
               ),
             ChoiceChip(
               label: const Text('その他（自由入力）'),
-              selected: selected != null &&
-                  !ServingMachine.presetValues.contains(selected),
-              onSelected: (_) => onSelected(''),
+              selected: _isCustom,
+              onSelected: (_) => widget.onSelected(''),
             ),
           ],
         ),
+        if (_isCustom) ...[
+          const SizedBox(height: 8),
+          TextField(
+            controller: _controller,
+            decoration: const InputDecoration(
+              isDense: true,
+              border: OutlineInputBorder(),
+              hintText: 'サービングマシン名を入力',
+            ),
+            onChanged: widget.onSelected,
+          ),
+        ],
       ],
     );
   }
