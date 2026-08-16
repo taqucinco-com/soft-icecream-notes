@@ -34,8 +34,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      # コメント本文に "[ui-verify]" が含まれる場合のみ、この後のAndroidエミュレータ関連ステップを実行する。
-      # エミュレータのセットアップ・起動は数分単位のコストがかかるため、既定ではスキップする。
       - name: Determine if UI verification (Android emulator) is requested
         id: ui_verify
         run: echo "enabled=${{ contains(github.event.comment.body, '[ui-verify]') || contains(github.event.review.body, '[ui-verify]') || contains(github.event.issue.body, '[ui-verify]') }}" >> "$GITHUB_OUTPUT"
@@ -58,10 +56,11 @@ jobs:
         if: steps.ui_verify.outputs.enabled == 'true'
         uses: android-actions/setup-android@v3
 
-      # gradle-versionは指定しない（mobile/androidはGradle Wrapperを使うため、setup-gradle側が自動検出する）。
       - name: Gradle cache
         if: steps.ui_verify.outputs.enabled == 'true'
         uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: "false"
 
       - name: AVD cache
         if: steps.ui_verify.outputs.enabled == 'true'
@@ -74,25 +73,6 @@ jobs:
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
           key: avd-${{ env.ANDROID_API_LEVEL }}
 
-      - name: Create AVD
-        if: steps.ui_verify.outputs.enabled == 'true' && steps.avd-cache.outputs.cache-hit != 'true'
-        run: |
-          SYSTEM_IMAGE="system-images;android-${{ env.ANDROID_API_LEVEL }};default;x86_64"
-          echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SYSTEM_IMAGE"
-          echo "no" | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" --verbose create avd -n "$ANDROID_AVD_NAME" -k "$SYSTEM_IMAGE" -d "pixel_6"
-
-      # reactivecircus/android-emulator-runner は script: の実行が終わるとエミュレータをkillしてしまうため使わない。
-      # ここでバックグラウンド起動し、後続の「Run Claude Code」ステップまで同一ジョブ内で生かしておく
-      # （anthropics/claude-code-action は composite action なので同じランナー上で直接実行され、adb経由でこのエミュレータが見える）。
-      - name: Start Android emulator (background)
-        if: steps.ui_verify.outputs.enabled == 'true'
-        run: |
-          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_AVD_NAME" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel on > /tmp/emulator.log 2>&1 &
-          disown
-          # shellcheck disable=SC2016 # このコマンドはadb shell経由でAndroidデバイス側で評価される想定であり、CIランナー側で展開してはいけない
-          "$ANDROID_HOME/platform-tools/adb" wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 3; done'
-          "$ANDROID_HOME/platform-tools/adb" devices
-
       - name: Set up Flutter (from mobile/.fvmrc)
         if: steps.ui_verify.outputs.enabled == 'true'
         uses: kuhnroyal/flutter-fvm-config-action@v3
@@ -101,12 +81,41 @@ jobs:
           setup: "true"
           cache: "true"
 
+      - name: Dart build_runner cache
+        if: steps.ui_verify.outputs.enabled == 'true'
+        uses: actions/cache@v4
+        with:
+          path: mobile/.dart_tool
+          key: dart-tool-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            dart-tool-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+
       - name: Install Flutter dependencies and generate code
         if: steps.ui_verify.outputs.enabled == 'true'
         working-directory: mobile
         run: |
           flutter pub get
           dart run build_runner build --delete-conflicting-outputs
+
+      - name: create and check booting AVD (via reactivecircus/android-emulator-runner)
+        if: steps.ui_verify.outputs.enabled == 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          avd-name: ${{ env.ANDROID_AVD_NAME }}
+          force-avd-creation: false
+          target: "default"
+          arch: "x86_64"
+          script: echo "AVD created and boot-verified by reactivecircus."
+
+      - name: Start Android emulator (background, without reactivecircus)
+        if: steps.ui_verify.outputs.enabled == 'true'
+        run: |
+          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_AVD_NAME" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim > /tmp/emulator.log 2>&1 &
+          disown
+          # shellcheck disable=SC2016
+          "$ANDROID_HOME/platform-tools/adb" wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 3; done'
+          "$ANDROID_HOME/platform-tools/adb" devices
 
       - name: Run Claude Code
         id: claude
@@ -125,7 +134,4 @@ jobs:
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          #
-          # adb/emulator/flutter/dart系のコマンドは、コメントに "[ui-verify]" を含めてAndroidエミュレータを
-          # 有効化した場合に .claude/skills/flutter-ui-verify スキルが使用する。
           claude_args: '--allowedTools "Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash($ANDROID_HOME/*),Bash(flutter:*),Bash(dart:*)"'
