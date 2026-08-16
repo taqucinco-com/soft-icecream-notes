@@ -59,5 +59,9 @@ jobs:
           # required tools. claude-code-action denies arbitrary Bash by default, so
           # without this allowlist every `gh pr view` / `gh pr diff` / `gh pr comment`
           # call the plugin makes is denied and the review silently produces zero PR
-          # comments, even though the step itself reports success.
-          claude_args: '--allowedTools "Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),mcp__github_inline_comment__create_inline_comment"'
+          # comments, even though the step itself reports success. The plugin's review
+          # flow is also built entirely on launching subagents ("Launch a haiku agent...",
+          # "Launch 4 agents in parallel..."), so Task must be allowed too, or every
+          # subagent launch is denied and the review produces nothing (observed as
+          # permission_denials_count > 0 with very few turns in the run log).
+          claude_args: '--allowedTools "Task,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),mcp__github_inline_comment__create_inline_comment"'
