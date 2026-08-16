@@ -97,8 +97,6 @@ jobs:
       - name: Capture screenshot
         if: always()
         run: |
-          adb -s emulator-5554 shell am start -n com.taqucinco.soft_icecream_notes.icecream_log/.MainActivity
-          sleep 3
           mkdir -p work
           adb -s emulator-5554 exec-out screencap -p > work/screencap.png
 
