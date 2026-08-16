@@ -47,6 +47,7 @@ jobs:
           key: avd-${{ env.ANDROID_API_LEVEL }}
 
       - name: Set up Flutter (from mobile/.fvmrc)
+        id: flutter_setup
         uses: kuhnroyal/flutter-fvm-config-action@v3
         with:
           path: mobile/.fvmrc
@@ -57,9 +58,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: mobile/.dart_tool
-          key: dart-tool-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          key: dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
           restore-keys: |
-            dart-tool-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+            dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-
 
       - name: Install Flutter dependencies and generate code
         working-directory: mobile
