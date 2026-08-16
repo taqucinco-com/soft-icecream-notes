@@ -4,12 +4,21 @@ name: Android emulator dry run
 # 単体で正しく動作するかをworkflow_dispatchで検証するためのワークフロー。
 # claude.yml本体には組み込まない。
 #
-# エミュレータの起動・破棄は reactivecircus/android-emulator-runner に任せる。
-# 手動で `emulator` をバックグラウンド起動する方式を最初に試したが、
-# taqucinco-com/android_emulator_workflow の実績あるワークフロー（7分31秒で完了）と
-# ほぼ同時刻に実行したところ、手動起動の方だけ "Start Android emulator" ステップで
-# ハングし続けた（14分経過しても完了せず）。reactivecircus側は起動・スナップショット
-# キャッシュ・ブート待ち・破棄までを一括で面倒見てくれるため、そちらに合わせる。
+# 検証の経緯:
+# 1. 手動で `emulator` をバックグラウンド起動する方式を最初に試したが、
+#    taqucinco-com/android_emulator_workflow の実績あるワークフロー（7分31秒で完了）と
+#    ほぼ同時刻に実行したところ、手動起動の方だけ "Start Android emulator" ステップで
+#    ハングし続けた（14分経過しても完了せず）。AVD作成自体は成功していたので、
+#    ハングの原因は手動の `emulator` 起動コマンド側にあると判断した。
+# 2. AVD作成・起動・破棄を reactivecircus/android-emulator-runner に一括で任せる構成に
+#    切り替えたところ、7分21秒で成功した。
+# 3. ただしclaude.yml本体はClaude Codeの1ターン（終了タイミングが読めない長いエージェント
+#    セッション）の間ずっとエミュレータを生かしておく必要があり、reactivecircusは
+#    script:終了時にエミュレータをkillしてしまうため単純には使えない。
+#    そこで「AVD作成はreactivecircusに任せ、起動・テスト実行は自前コマンドで行う」
+#    ハイブリッド構成が成立するかをこのワークフローで検証する。
+#    reactivecircusのデフォルトのemulator-optionsに合わせ、`-accel on`を明示せず
+#    （オリジナルの手動起動コマンドとの差分はここだけにする）ハングが再現するかを見る。
 
 on:
   workflow_dispatch:
@@ -20,6 +29,7 @@ jobs:
     timeout-minutes: 45
     env:
       ANDROID_API_LEVEL: "34"
+      ANDROID_AVD_NAME: "ci_test"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -70,24 +80,36 @@ jobs:
           flutter pub get
           dart run build_runner build --delete-conflicting-outputs
 
-      - name: create AVD and generate snapshot for caching
+      # AVD作成（SDKコンポーネントの用意・system-image取得・avdmanager呼び出し・1回起動しての
+      # ブート確認）はreactivecircusに任せる。killされるのはこのステップ内で起動した
+      # エミュレータのプロセスだけで、AVD自体（~/.android/avd/配下のファイル）は残るため、
+      # 後続のステップから同じ名前(avd-name)で自前起動できる。
+      - name: create AVD (via reactivecircus/android-emulator-runner)
         if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ env.ANDROID_API_LEVEL }}
+          avd-name: ${{ env.ANDROID_AVD_NAME }}
           force-avd-creation: false
           target: "default"
           arch: "x86_64"
-          script: echo "Generated AVD snapshot for caching."
+          script: echo "AVD created and boot-verified by reactivecircus."
+
+      # ここから先は reactivecircus/android-emulator-runner に依存しない。
+      # emulator-optionsのデフォルト（-no-window -gpu swiftshader_indirect -no-snapshot
+      # -noaudio -no-boot-anim）に合わせ、-accel on は明示しない。
+      - name: Start Android emulator (background, without reactivecircus)
+        run: |
+          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_AVD_NAME" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim > /tmp/emulator.log 2>&1 &
+          disown
+          # shellcheck disable=SC2016 # このコマンドはadb shell経由でAndroidデバイス側で評価される想定であり、CIランナー側で展開してはいけない
+          "$ANDROID_HOME/platform-tools/adb" wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 3; done'
+          "$ANDROID_HOME/platform-tools/adb" devices
 
       - name: Run integration test on Android emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ env.ANDROID_API_LEVEL }}
-          force-avd-creation: false
-          target: "default"
-          arch: "x86_64"
-          working-directory: mobile
-          script: |
-            "$ANDROID_HOME/platform-tools/adb" devices
-            flutter test integration_test/app_test.dart -d emulator-5554
+        working-directory: mobile
+        run: flutter test integration_test/app_test.dart -d emulator-5554
+
+      - name: Dump emulator log on failure
+        if: failure()
+        run: cat /tmp/emulator.log || true
