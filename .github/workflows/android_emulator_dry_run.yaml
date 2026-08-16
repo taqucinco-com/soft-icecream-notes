@@ -53,6 +53,14 @@ jobs:
           setup: "true"
           cache: "true"
 
+      - name: Dart build_runner cache
+        uses: actions/cache@v4
+        with:
+          path: mobile/.dart_tool
+          key: dart-tool-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            dart-tool-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+
       - name: Install Flutter dependencies and generate code
         working-directory: mobile
         run: |
