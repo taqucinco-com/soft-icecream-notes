@@ -3,6 +3,13 @@ name: Android emulator dry run
 # claude.yml の [ui-verify] 有効時に実行されるAndroidエミュレータのセットアップ手順が
 # 単体で正しく動作するかをworkflow_dispatchで検証するためのワークフロー。
 # claude.yml本体には組み込まない。
+#
+# エミュレータの起動・破棄は reactivecircus/android-emulator-runner に任せる。
+# 手動で `emulator` をバックグラウンド起動する方式を最初に試したが、
+# taqucinco-com/android_emulator_workflow の実績あるワークフロー（7分31秒で完了）と
+# ほぼ同時刻に実行したところ、手動起動の方だけ "Start Android emulator" ステップで
+# ハングし続けた（14分経過しても完了せず）。reactivecircus側は起動・スナップショット
+# キャッシュ・ブート待ち・破棄までを一括で面倒見てくれるため、そちらに合わせる。
 
 on:
   workflow_dispatch:
@@ -13,7 +20,6 @@ jobs:
     timeout-minutes: 45
     env:
       ANDROID_API_LEVEL: "34"
-      ANDROID_AVD_NAME: "ci_test"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -51,23 +57,6 @@ jobs:
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
           key: avd-${{ env.ANDROID_API_LEVEL }}
 
-      - name: Create AVD
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        run: |
-          SYSTEM_IMAGE="system-images;android-${{ env.ANDROID_API_LEVEL }};default;x86_64"
-          echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SYSTEM_IMAGE"
-          echo "no" | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" --verbose create avd -n "$ANDROID_AVD_NAME" -k "$SYSTEM_IMAGE" -d "pixel_6"
-
-      # reactivecircus/android-emulator-runner は script: の実行が終わるとエミュレータをkillしてしまうため使わない。
-      # ここでバックグラウンド起動し、後続のテスト実行ステップまで同一ジョブ内で生かしておく。
-      - name: Start Android emulator (background)
-        run: |
-          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_AVD_NAME" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel on > /tmp/emulator.log 2>&1 &
-          disown
-          # shellcheck disable=SC2016 # このコマンドはadb shell経由でAndroidデバイス側で評価される想定であり、CIランナー側で展開してはいけない
-          "$ANDROID_HOME/platform-tools/adb" wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 3; done'
-          "$ANDROID_HOME/platform-tools/adb" devices
-
       - name: Set up Flutter (from mobile/.fvmrc)
         uses: kuhnroyal/flutter-fvm-config-action@v3
         with:
@@ -81,10 +70,24 @@ jobs:
           flutter pub get
           dart run build_runner build --delete-conflicting-outputs
 
-      - name: Run integration test on Android emulator
-        working-directory: mobile
-        run: flutter test integration_test/app_test.dart -d emulator-5554
+      - name: create AVD and generate snapshot for caching
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          force-avd-creation: false
+          target: "default"
+          arch: "x86_64"
+          script: echo "Generated AVD snapshot for caching."
 
-      - name: Dump emulator log on failure
-        if: failure()
-        run: cat /tmp/emulator.log || true
+      - name: Run integration test on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          force-avd-creation: false
+          target: "default"
+          arch: "x86_64"
+          working-directory: mobile
+          script: |
+            "$ANDROID_HOME/platform-tools/adb" devices
+            flutter test integration_test/app_test.dart -d emulator-5554
