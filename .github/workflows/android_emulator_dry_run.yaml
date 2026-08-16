@@ -1,9 +1,5 @@
 name: Android emulator dry run
 
-# claude.yml の [ui-verify] 有効時に実行されるAndroidエミュレータのセットアップ手順が
-# 単体で正しく動作するかをworkflow_dispatchで検証するためのワークフロー。
-# claude.yml本体には組み込まない。
-
 on:
   workflow_dispatch:
 
@@ -20,8 +16,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      # mobile/android/app/build.gradle.kts で sourceCompatibility/targetCompatibility/jvmTarget が
-      # JVM_17 に固定されており、Gradle 9.1.0 自体もJDK 17未満では起動できないため必須。
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -37,9 +31,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # gradle-versionは指定しない（mobile/androidはGradle Wrapperを使うため、setup-gradle側が自動検出する）。
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: "false"
 
       - name: AVD cache
         uses: actions/cache@v4
@@ -51,23 +46,6 @@ jobs:
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
           key: avd-${{ env.ANDROID_API_LEVEL }}
 
-      - name: Create AVD
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        run: |
-          SYSTEM_IMAGE="system-images;android-${{ env.ANDROID_API_LEVEL }};default;x86_64"
-          echo "y" | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$SYSTEM_IMAGE"
-          echo "no" | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" --verbose create avd -n "$ANDROID_AVD_NAME" -k "$SYSTEM_IMAGE" -d "pixel_6"
-
-      # reactivecircus/android-emulator-runner は script: の実行が終わるとエミュレータをkillしてしまうため使わない。
-      # ここでバックグラウンド起動し、後続のテスト実行ステップまで同一ジョブ内で生かしておく。
-      - name: Start Android emulator (background)
-        run: |
-          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_AVD_NAME" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -accel on > /tmp/emulator.log 2>&1 &
-          disown
-          # shellcheck disable=SC2016 # このコマンドはadb shell経由でAndroidデバイス側で評価される想定であり、CIランナー側で展開してはいけない
-          "$ANDROID_HOME/platform-tools/adb" wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 3; done'
-          "$ANDROID_HOME/platform-tools/adb" devices
-
       - name: Set up Flutter (from mobile/.fvmrc)
         uses: kuhnroyal/flutter-fvm-config-action@v3
         with:
@@ -75,15 +53,59 @@ jobs:
           setup: "true"
           cache: "true"
 
+      - name: Dart build_runner cache
+        uses: actions/cache@v4
+        with:
+          path: mobile/.dart_tool
+          key: dart-tool-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            dart-tool-${{ runner.os }}-${{ env.FLUTTER_VERSION }}-
+
       - name: Install Flutter dependencies and generate code
         working-directory: mobile
         run: |
           flutter pub get
           dart run build_runner build --delete-conflicting-outputs
 
+      # AVD作成（SDKコンポーネントの用意・system-image取得・avdmanager呼び出し・1回起動しての
+      # ブート確認）はreactivecircusに任せる。killされるのはこのステップ内で起動した
+      # エミュレータのプロセスだけで、AVD自体（~/.android/avd/配下のファイル）は残るため、
+      # 後続のステップから同じ名前(avd-name)で自前起動できる。
+      - name: create and check booting AVD (via reactivecircus/android-emulator-runner)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          avd-name: ${{ env.ANDROID_AVD_NAME }}
+          force-avd-creation: false
+          target: "default"
+          arch: "x86_64"
+          script: echo "AVD created and boot-verified by reactivecircus."
+
+      # ここから先は reactivecircus/android-emulator-runner に依存しない。
+      - name: Start Android emulator (background, without reactivecircus)
+        run: |
+          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_AVD_NAME" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim > /tmp/emulator.log 2>&1 &
+          disown
+          # shellcheck disable=SC2016 # このコマンドはadb shell経由でAndroidデバイス側で評価される想定であり、CIランナー側で展開してはいけない
+          "$ANDROID_HOME/platform-tools/adb" wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 3; done'
+          "$ANDROID_HOME/platform-tools/adb" devices
+
       - name: Run integration test on Android emulator
         working-directory: mobile
         run: flutter test integration_test/app_test.dart -d emulator-5554
+
+      - name: Capture screenshot
+        if: always()
+        run: |
+          mkdir -p work
+          adb -s emulator-5554 exec-out screencap -p > work/screencap.png
+
+      - name: Upload screenshot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screencap
+          path: work/screencap.png
 
       - name: Dump emulator log on failure
         if: failure()
