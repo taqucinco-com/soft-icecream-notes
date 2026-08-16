@@ -36,8 +36,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      # mobile/android/app/build.gradle.kts で sourceCompatibility/targetCompatibility/jvmTarget が
-      # JVM_17 に固定されており、Gradle 9.1.0 自体もJDK 17未満では起動できないため必須。
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -53,7 +51,6 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # gradle-versionは指定しない（mobile/androidはGradle Wrapperを使うため、setup-gradle側が自動検出する）。
       - name: Gradle cache
         uses: gradle/actions/setup-gradle@v5
 
@@ -84,8 +81,14 @@ jobs:
       # ブート確認）はreactivecircusに任せる。killされるのはこのステップ内で起動した
       # エミュレータのプロセスだけで、AVD自体（~/.android/avd/配下のファイル）は残るため、
       # 後続のステップから同じ名前(avd-name)で自前起動できる。
+      #
+      # 検証用に if: steps.avd-cache.outputs.cache-hit != 'true' を一時的にコメントアウトしている。
+      # キャッシュヒット時にこのステップがスキップされ、reactivecircusによる「1回の起動確認」を
+      # 経ないままキャッシュ復元されたAVDに対して直接自前コマンドで起動しようとしたところ、
+      # 後続の "Start Android emulator" ステップがハングした（AVD cache が効いた2回目の実行時）。
+      # 毎回このステップを実行させて、それでもハングが再現するかを切り分ける。
       - name: create AVD (via reactivecircus/android-emulator-runner)
-        if: steps.avd-cache.outputs.cache-hit != 'true'
+        # if: steps.avd-cache.outputs.cache-hit != 'true'
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: ${{ env.ANDROID_API_LEVEL }}
