@@ -4,6 +4,8 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val ciDebugKeystore = rootProject.file("ci-debug.keystore")
+
 android {
     namespace = "com.taqucinco.soft_icecream_notes.icecream_log"
     compileSdk = flutter.compileSdkVersion
@@ -23,6 +25,17 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    signingConfigs {
+        if (ciDebugKeystore.exists()) {
+            getByName("debug") {
+                storeFile = ciDebugKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
     }
 
     buildTypes {
