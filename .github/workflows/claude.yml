@@ -114,9 +114,7 @@ jobs:
 
       - name: Decode Debug Keystore
         if: steps.ui_verify.outputs.enabled == 'true'
-        run: |
-          mkdir -p ~/.android
-          echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > ~/.android/debug.keystore
+        run: echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > mobile/android/ci-debug.keystore
 
       - name: Set up Flutter (from mobile/.fvmrc)
         if: steps.ui_verify.outputs.enabled == 'true'

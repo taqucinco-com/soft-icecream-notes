@@ -18,6 +18,8 @@ val dartDefines: Map<String, String> = (project.findProperty("dart-defines") as 
     }
     ?: emptyMap()
 
+val ciDebugKeystore = rootProject.file("ci-debug.keystore")
+
 android {
     namespace = "com.taqucinco.soft_icecream_notes.icecream_log"
     compileSdk = flutter.compileSdkVersion
@@ -39,6 +41,17 @@ android {
         versionName = flutter.versionName
 
         manifestPlaceholders["googleMapsApiKey"] = dartDefines["GOOGLE_MAP_KEY"] ?: ""
+    }
+
+    signingConfigs {
+        if (System.getenv("GITHUB_ACTIONS") == "true" && ciDebugKeystore.exists()) {
+            getByName("debug") {
+                storeFile = ciDebugKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
     }
 
     buildTypes {
