@@ -49,19 +49,18 @@ adb -s emulator-5554 shell dumpsys window | grep mCurrentFocus
 
 ## 結果コメントへのスクリーンショット添付
 
-CI上での検証結果は、PR/Issueへの最終コメントに文章で結論を書くだけでなく、検証に使ったスクリーンショットも画像として埋め込むこと。GitHub APIにはコメントへ直接画像をアップロードする手段が無いため、画像をリポジトリにコミット・pushしてから`raw.githubusercontent.com`のURLで埋め込む。
+CI上での検証結果は、PR/Issueへの最終コメントに文章で結論を書くだけでなく、検証に使ったスクリーンショットも画像として埋め込むこと。リポジトリへのコミットは不要（画像でリポジトリを肥大化させない）。`gh`コマンドの`--attach`オプションで、人間がWeb UIから画像を貼り付けるのと同じ方法（GitHubのuser-attachmentsとしてアップロード）でコメントに直接添付できる。
 
-1. 現在のブランチ名を確認する（Issue向けの検証など、まだ何もコミットしていない場合は作業用ブランチが無いことがあるので、その場合は新しく作る）。
-2. スクリーンショットを追加してコミット・pushする。`.claude/screenshots/`配下は通常gitignore対象のため`-f`が必要。
+Issueの場合:
 
 ```bash
-git add -f .claude/screenshots/mobile/<name>.png
-git commit -m "..."
-git push -u origin <branch>
+gh issue comment <issue番号> --body "<結果の説明>" --attach .claude/screenshots/mobile/<name>.png#<説明>
 ```
 
-3. 最終コメントに以下の形式で埋め込む（`<owner>/<repo>`は`git remote get-url origin`または`$GITHUB_REPOSITORY`で確認する）。
+PRの場合:
 
-```markdown
-![<説明>](https://raw.githubusercontent.com/<owner>/<repo>/<branch>/.claude/screenshots/mobile/<name>.png)
+```bash
+gh pr comment <PR番号> --body "<結果の説明>" --attach .claude/screenshots/mobile/<name>.png#<説明>
 ```
+
+`--attach`は繰り返し指定でき、最大50ファイルまで添付できる。`#<説明>`部分は省略可能（省略時はファイル名が代替テキストになる）。
