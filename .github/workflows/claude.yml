@@ -97,6 +97,12 @@ jobs:
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
           key: avd-${{ env.ANDROID_API_LEVEL }}
 
+      - name: Decode Debug Keystore
+        if: steps.ui_verify.outputs.enabled == 'true'
+        run: |
+          mkdir -p ~/.android
+          echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > ~/.android/debug.keystore
+
       - name: Set up Flutter (from mobile/.fvmrc)
         if: steps.ui_verify.outputs.enabled == 'true'
         id: flutter_setup
