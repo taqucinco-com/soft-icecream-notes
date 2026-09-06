@@ -1,11 +1,11 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import 'package:icecream_log/composition/nearby_store_finder_provider.dart';
 import 'package:icecream_log/features/memo/application/di/usecase_providers.dart';
 import 'package:icecream_log/features/memo/application/providers/memo_edit_state.dart';
 import 'package:icecream_log/features/memo/domain/entities/memo.dart';
+import 'package:icecream_log/features/memo/domain/entities/nearby_store_candidate.dart';
 import 'package:icecream_log/features/memo/domain/entities/taste_rating.dart';
-import 'package:icecream_log/features/store_search/application/di/usecase_providers.dart';
-import 'package:icecream_log/features/store_search/domain/entities/store_candidate.dart';
 
 part 'generated/memo_edit.g.dart';
 
@@ -21,9 +21,9 @@ class MemoEdit extends _$MemoEdit {
     final metadata = ref.read(extractPhotoMetadataUseCaseProvider)(
       mockPhotoPath,
     );
-    List<StoreCandidate> candidates = const [];
+    List<NearbyStoreCandidate> candidates = const [];
     if (metadata.latitude != null && metadata.longitude != null) {
-      candidates = await ref.read(searchNearbyStoresUseCaseProvider)(
+      candidates = await ref.read(nearbyStoreFinderProvider)(
         metadata.latitude!,
         metadata.longitude!,
       );
@@ -51,7 +51,7 @@ class MemoEdit extends _$MemoEdit {
     state = state.copyWith(eatenDate: date);
   }
 
-  void selectStoreCandidate(StoreCandidate candidate) {
+  void selectNearbyStoreCandidate(NearbyStoreCandidate candidate) {
     state = state.copyWith(
       storeName: candidate.name,
       storePlaceId: candidate.placeId,

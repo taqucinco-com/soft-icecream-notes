@@ -1,5 +1,5 @@
+import 'package:icecream_log/features/memo/domain/entities/nearby_store_candidate.dart';
 import 'package:icecream_log/features/memo/domain/entities/taste_rating.dart';
-import 'package:icecream_log/features/store_search/domain/entities/store_candidate.dart';
 
 class MemoEditState {
   const MemoEditState({
@@ -22,7 +22,7 @@ class MemoEditState {
   final DateTime? eatenDate;
   final double? latitude;
   final double? longitude;
-  final List<StoreCandidate> storeCandidates;
+  final List<NearbyStoreCandidate> storeCandidates;
   final String? storeName;
   final String? storePlaceId;
   final bool isManualStoreEntry;
@@ -37,7 +37,7 @@ class MemoEditState {
     DateTime? eatenDate,
     double? latitude,
     double? longitude,
-    List<StoreCandidate>? storeCandidates,
+    List<NearbyStoreCandidate>? storeCandidates,
     String? storeName,
     String? storePlaceId,
     bool? isManualStoreEntry,

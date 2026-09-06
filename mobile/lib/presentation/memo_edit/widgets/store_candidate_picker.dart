@@ -78,7 +78,8 @@ class _StoreCandidatePickerState extends ConsumerState<StoreCandidatePicker> {
             for (final entry in state.storeCandidates.asMap().entries)
               ActionChip(
                 label: Text('候補${entry.key + 1}: ${entry.value.name}'),
-                onPressed: () => notifier.selectStoreCandidate(entry.value),
+                onPressed: () =>
+                    notifier.selectNearbyStoreCandidate(entry.value),
               ),
             ActionChip(
               label: const Text('手動で入力'),
