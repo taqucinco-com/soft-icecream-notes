@@ -68,8 +68,8 @@ adb -s emulator-5554 exec-out screencap -p > work/screenshots/<name>.png
 
 ## スクリーンショットの視覚的分析（VLMによる評価・JSON）
 
-目視確認・VLMによる構造的評価・JSON形式での記録は、`flutter-ui-verify`スキルの7節（Figmaワイヤーフレームとの構造的比較）の手順・チェックリスト・JSON形式（`criteria`配列、`overall_verdict`等）をそのまま使うこと。CI固有の差分はスクリーンショットの保存先パスのみ（`.claude/screenshots/<module>/`ではなく`work/screenshots/`を使う）。
+目視確認・VLMによる構造的評価・JSON形式での記録は、`flutter-ui-verify`スキルの7節（画面の評価）の手順・チェックリスト・JSON形式（`criteria`配列、`overall_verdict`等）をそのまま使うこと。CI固有の差分はスクリーンショットの保存先パスのみ（`.claude/screenshots/<module>/`ではなく`work/screenshots/`を使う）。
 
-Figma参照画像との比較を伴わない単純な起動確認の場合も、同じチェックリスト・JSON形式を流用する。比較対象が無い観点は`not_applicable`とし、`figma_node_id`・`reference_image`はFigma参照を取得していないことがわかるよう`null`にする。これにより、ローカル・CIのどちらで検証しても同じ基準・同じ形式の結果が得られる。
+7節の分岐もそのまま踏襲する。**依頼コメントで「Figma」「ワイヤーフレーム」等への明示的な言及があるときだけ7-A（Figmaとの構造的比較）を行い、言及が無いときは7-B（依頼内容に対する単純な構造分析）を行う。** 7-Bの場合、`figma_node_id`・`reference_image`は`null`にする。
 
 このJSONは`--body`の本文中にコードフェンス付きで埋め込む（`--attach`は画像/動画専用のため、JSONの添付には使えない）。
