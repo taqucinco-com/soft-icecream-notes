@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/providers/memo_list.dart';
-import '../../domain/entities/memo.dart';
-import '../format/date_format.dart';
-import 'widgets/taste_radar_chart.dart';
+import 'package:icecream_log/features/memo/application/providers/memo_list.dart';
+import 'package:icecream_log/features/memo/domain/entities/memo.dart';
+import 'package:icecream_log/presentation/format/date_format.dart';
+import 'package:icecream_log/presentation/memo_detail/widgets/taste_radar_chart.dart';
 
 /// Figma 04フレーム（メモ詳細）。
 class MemoDetailScreen extends ConsumerWidget {
@@ -22,9 +22,9 @@ class MemoDetailScreen extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('編集機能は今後実装予定です')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('編集機能は今後実装予定です')));
             },
             child: const Text('編集'),
           ),
@@ -39,7 +39,8 @@ class MemoDetailScreen extends ConsumerWidget {
           return _DetailContent(memo: memo);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(child: Text('読み込みに失敗しました: $error')),
+        error: (error, stackTrace) =>
+            Center(child: Text('読み込みに失敗しました: $error')),
       ),
     );
   }

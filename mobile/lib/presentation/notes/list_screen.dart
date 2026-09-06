@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../application/providers/memo_list.dart';
-import 'widgets/memo_card.dart';
+import 'package:icecream_log/features/memo/application/providers/memo_list.dart';
+import 'package:icecream_log/presentation/notes/widgets/memo_card.dart';
 
 class ListScreen extends ConsumerWidget {
   const ListScreen({super.key});

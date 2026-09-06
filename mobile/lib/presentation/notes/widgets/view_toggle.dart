@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../application/providers/view_mode.dart';
+import 'package:icecream_log/features/memo/application/providers/view_mode.dart';
 
 /// Figma 01/02フレームのHeader右側にあるセグメントコントロール（リスト/マップ）。
 class ViewToggle extends ConsumerWidget {
@@ -22,12 +22,14 @@ class ViewToggle extends ConsumerWidget {
           _Segment(
             label: 'リスト',
             selected: mode == NotesViewMode.list,
-            onTap: () => ref.read(viewModeProvider.notifier).set(NotesViewMode.list),
+            onTap: () =>
+                ref.read(viewModeProvider.notifier).set(NotesViewMode.list),
           ),
           _Segment(
             label: 'マップ',
             selected: mode == NotesViewMode.map,
-            onTap: () => ref.read(viewModeProvider.notifier).set(NotesViewMode.map),
+            onTap: () =>
+                ref.read(viewModeProvider.notifier).set(NotesViewMode.map),
           ),
         ],
       ),

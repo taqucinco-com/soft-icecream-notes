@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/providers/view_mode.dart';
-import 'list_screen.dart';
-import 'map_screen.dart';
-import 'widgets/serving_machine_filter_bar.dart';
-import 'widgets/view_toggle.dart';
+import 'package:icecream_log/features/memo/application/providers/view_mode.dart';
+import 'package:icecream_log/presentation/notes/list_screen.dart';
+import 'package:icecream_log/presentation/notes/map_screen.dart';
+import 'package:icecream_log/presentation/notes/widgets/serving_machine_filter_bar.dart';
+import 'package:icecream_log/presentation/notes/widgets/view_toggle.dart';
 
 /// 「メモ一覧」ブランチのルート画面（Figma 01/02フレーム）。
 /// [ViewToggle]でリスト/マップを切り替える。

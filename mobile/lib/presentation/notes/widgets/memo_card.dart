@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../domain/entities/memo.dart';
-import '../../format/date_format.dart';
+import 'package:icecream_log/features/memo/domain/entities/memo.dart';
+import 'package:icecream_log/presentation/format/date_format.dart';
 
 class MemoCard extends StatelessWidget {
   const MemoCard({super.key, required this.memo, required this.onTap});
@@ -76,10 +76,7 @@ class _ServingMachineTag extends StatelessWidget {
         color: Theme.of(context).colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall,
-      ),
+      child: Text(label, style: Theme.of(context).textTheme.labelSmall),
     );
   }
 }

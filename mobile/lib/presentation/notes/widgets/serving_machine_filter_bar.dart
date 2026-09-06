@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../application/providers/serving_machine_filter.dart';
-import '../../../domain/entities/serving_machine.dart';
+import 'package:icecream_log/features/memo/application/providers/serving_machine_filter.dart';
+import 'package:icecream_log/features/memo/domain/entities/serving_machine.dart';
 
 /// Figma 01/02フレームの「すべて / カルピジャーニ / 日世 / その他」フィルタ。
 class ServingMachineFilterBar extends ConsumerWidget {
@@ -28,9 +28,8 @@ class ServingMachineFilterBar extends ConsumerWidget {
             _FilterChip(
               label: machine,
               selected: selected == machine,
-              onTap: () => ref
-                  .read(servingMachineFilterProvider.notifier)
-                  .set(machine),
+              onTap: () =>
+                  ref.read(servingMachineFilterProvider.notifier).set(machine),
             ),
           ],
         ],
@@ -59,7 +58,9 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? scheme.primaryContainer : scheme.surfaceContainerHighest,
+          color: selected
+              ? scheme.primaryContainer
+              : scheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(label, style: const TextStyle(fontSize: 13)),

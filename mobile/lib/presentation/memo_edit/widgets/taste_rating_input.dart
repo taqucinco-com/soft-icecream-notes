@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../application/providers/memo_edit.dart';
-import '../../../domain/entities/taste_rating.dart';
+import 'package:icecream_log/features/memo/application/providers/memo_edit.dart';
+import 'package:icecream_log/features/memo/domain/entities/taste_rating.dart';
 
 const _defaultRating = TasteRating(
   mouthfeel: 1,
@@ -56,9 +56,8 @@ class TasteRatingInput extends ConsumerWidget {
         _AxisRow(
           label: '温度管理',
           value: current.temperatureControl,
-          onChanged: (v) => notifier.setTasteRating(
-            current.copyWith(temperatureControl: v),
-          ),
+          onChanged: (v) =>
+              notifier.setTasteRating(current.copyWith(temperatureControl: v)),
         ),
       ],
     );

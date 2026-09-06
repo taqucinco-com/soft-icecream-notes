@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../memo_detail/memo_detail_screen.dart';
-import '../memo_edit/memo_edit_screen.dart';
-import '../notes/notes_tab_screen.dart';
-import '../settings/settings_screen.dart';
-import '../shell/app_shell.dart';
+import 'package:icecream_log/presentation/memo_detail/memo_detail_screen.dart';
+import 'package:icecream_log/presentation/memo_edit/memo_edit_screen.dart';
+import 'package:icecream_log/presentation/notes/notes_tab_screen.dart';
+import 'package:icecream_log/presentation/settings/settings_screen.dart';
+import 'package:icecream_log/presentation/shell/app_shell.dart';
 
 final GoRouter appRouter = GoRouter(
   initialLocation: '/notes',
@@ -22,9 +22,8 @@ final GoRouter appRouter = GoRouter(
               routes: [
                 GoRoute(
                   path: 'detail/:memoId',
-                  builder: (context, state) => MemoDetailScreen(
-                    memoId: state.pathParameters['memoId']!,
-                  ),
+                  builder: (context, state) =>
+                      MemoDetailScreen(memoId: state.pathParameters['memoId']!),
                 ),
               ],
             ),
@@ -42,10 +41,8 @@ final GoRouter appRouter = GoRouter(
     ),
     GoRoute(
       path: '/memo/new',
-      pageBuilder: (context, state) => const MaterialPage(
-        fullscreenDialog: true,
-        child: MemoEditScreen(),
-      ),
+      pageBuilder: (context, state) =>
+          const MaterialPage(fullscreenDialog: true, child: MemoEditScreen()),
     ),
   ],
 );
