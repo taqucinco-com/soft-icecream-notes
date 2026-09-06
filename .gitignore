@@ -118,6 +118,7 @@ app.*.symbols
 
 .env
 .env.*
+!.env.sample
 
 # FVM Version Cache
 **/.fvm/
