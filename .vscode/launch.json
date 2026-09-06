@@ -7,7 +7,10 @@
             "type": "dart",
             "cwd": "mobile",
             "program": "lib/main.dart",
-            "flutterMode": "debug"
+            "flutterMode": "debug",
+            "args": [
+                "--dart-define-from-file=../.env.local"
+            ]
         },
         {
             "name": "icecream_log (release)",
@@ -15,7 +18,10 @@
             "type": "dart",
             "cwd": "mobile",
             "program": "lib/main.dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "args": [
+                "--dart-define-from-file=../.env.local"
+            ]
         }
     ]
 }

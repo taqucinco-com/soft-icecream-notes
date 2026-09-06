@@ -16,6 +16,11 @@ jobs:
         with:
           fetch-depth: 1
 
+      # .env.localはgitignore対象なので、--dart-define-from-fileで使う分をCI上で
+      # GitHub Actions Secretsから生成する（ローカル開発時に手元の.env.localを使うのと同じ形）。
+      - name: Create .env.local from secret
+        run: echo "GOOGLE_MAP_KEY=${{ secrets.GOOGLE_MAP_KEY }}" > .env.local
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -93,7 +98,7 @@ jobs:
 
       - name: Run integration test on Android emulator
         working-directory: mobile
-        run: flutter test integration_test/app_test.dart -d emulator-5554
+        run: flutter test integration_test/app_test.dart -d emulator-5554 --dart-define-from-file=../.env.local
 
       - name: Capture screenshot
         if: always()

@@ -38,6 +38,13 @@ jobs:
         id: ui_verify
         run: echo "enabled=${{ contains(github.event.comment.body, '[ui-verify]') || contains(github.event.review.body, '[ui-verify]') || contains(github.event.issue.body, '[ui-verify]') }}" >> "$GITHUB_OUTPUT"
 
+      # .env.localはgitignore対象なので、--dart-define-from-fileで使う分をCI上で
+      # GitHub Actions Secretsから生成する（ローカル開発時に手元の.env.localを使うのと同じ形）。
+      # Claudeがこのjob内でflutter build/runする際は --dart-define-from-file=../.env.local を使う。
+      - name: Create .env.local from secret
+        if: steps.ui_verify.outputs.enabled == 'true'
+        run: echo "GOOGLE_MAP_KEY=${{ secrets.GOOGLE_MAP_KEY }}" > .env.local
+
       - name: Set up JDK 17
         if: steps.ui_verify.outputs.enabled == 'true'
         uses: actions/setup-java@v4

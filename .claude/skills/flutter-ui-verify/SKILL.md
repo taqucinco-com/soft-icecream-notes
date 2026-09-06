@@ -33,11 +33,13 @@ until adb devices | grep -q "emulator-5554.*device$"; do sleep 2; done
 
 ```bash
 cd mobile
-nohup <flutter-cmd> run -d emulator-5554 > /tmp/flutter_run.log 2>&1 &
+nohup <flutter-cmd> run -d emulator-5554 --dart-define-from-file=../.env.local > /tmp/flutter_run.log 2>&1 &
 disown
 ```
 
 `<flutter-cmd>`はローカルでは`fvm flutter`、CIでは`flutter`（0節参照）。以降このスキル内で「`flutter`コマンド」と書く場合はすべて同様に読み替える。
+
+`--dart-define-from-file=../.env.local`はGoogle Maps APIキー（`GOOGLE_MAP_KEY`）等のシークレットを読み込むために必須（リポジトリ直下の`.env.local`を参照。ローカルでは各自作成、CIでは`claude.yml`が`secrets.GOOGLE_MAP_KEY`から生成済み）。省略すると地図画面（`MapScreen`）が空白のまま表示される。
 
 起動完了待ち（同じく`run_in_background`+通知待ち）:
 
