@@ -46,3 +46,22 @@ adb -s emulator-5554 shell dumpsys window | grep mCurrentFocus
 ## それ以降の手順
 
 スクリーンショット撮影・タップ座標の正確な取得・ヒットターゲットのデバッグ・環境要因の落とし穴・Figmaワイヤーフレームとの構造比較は、`.claude/skills/flutter-ui-verify/SKILL.md`の3節以降をそのまま使う。
+
+## 結果コメントへのスクリーンショット添付
+
+CI上での検証結果は、PR/Issueへの最終コメントに文章で結論を書くだけでなく、検証に使ったスクリーンショットも画像として埋め込むこと。GitHub APIにはコメントへ直接画像をアップロードする手段が無いため、画像をリポジトリにコミット・pushしてから`raw.githubusercontent.com`のURLで埋め込む。
+
+1. 現在のブランチ名を確認する（Issue向けの検証など、まだ何もコミットしていない場合は作業用ブランチが無いことがあるので、その場合は新しく作る）。
+2. スクリーンショットを追加してコミット・pushする。`.claude/screenshots/`配下は通常gitignore対象のため`-f`が必要。
+
+```bash
+git add -f .claude/screenshots/mobile/<name>.png
+git commit -m "..."
+git push -u origin <branch>
+```
+
+3. 最終コメントに以下の形式で埋め込む（`<owner>/<repo>`は`git remote get-url origin`または`$GITHUB_REPOSITORY`で確認する）。
+
+```markdown
+![<説明>](https://raw.githubusercontent.com/<owner>/<repo>/<branch>/.claude/screenshots/mobile/<name>.png)
+```
