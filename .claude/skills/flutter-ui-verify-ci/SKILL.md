@@ -45,11 +45,18 @@ adb -s emulator-5554 shell dumpsys window | grep mCurrentFocus
 
 ## それ以降の手順
 
-スクリーンショット撮影・タップ座標の正確な取得・ヒットターゲットのデバッグ・環境要因の落とし穴・Figmaワイヤーフレームとの構造比較は、`.claude/skills/flutter-ui-verify/SKILL.md`の3節以降をそのまま使う。
+スクリーンショット撮影・タップ座標の正確な取得・ヒットターゲットのデバッグ・環境要因の落とし穴・Figmaワイヤーフレームとの構造比較は、`.claude/skills/flutter-ui-verify/SKILL.md`の3節以降を使う。**ただし保存先パスだけは次節の指示に従うこと**（`.claude/screenshots/<module>/`ではなく`work/screenshots/`を使う）。
 
-## スクリーンショットの共有方法
+## スクリーンショットの保存先（CI環境の制約）
 
-検証に使ったスクリーンショットは`.claude/screenshots/mobile/<name>.png`に保存しておくこと。それ以上の作業（コミットやアップロード）はClaude自身が行う必要は無い。`Run Claude Code`ステップの後続で、ワークフロー（`claude.yml`）側がこのディレクトリの`*.png`を自動でGitHub Actionsのartifactとしてアップロードし、そのダウンロードリンクをPR/Issueに別コメントで投稿する。
+CI環境のサンドボックスは、拡張子やサブディレクトリを問わず`.claude/`配下への書き込みを一律で「sensitive file」として拒否する。そのため`flutter-ui-verify`スキルが指示する`.claude/screenshots/<module>/`には保存できない。代わりに`work/screenshots/`に保存すること（例: `work/screenshots/develop-initial-screen.png`。ディレクトリが無ければ`mkdir -p work/screenshots`で作成する）。
+
+```bash
+mkdir -p work/screenshots
+adb -s emulator-5554 exec-out screencap -p > work/screenshots/<name>.png
+```
+
+`Run Claude Code`ステップの後続で、ワークフロー（`claude.yml`）側がこのディレクトリの`*.png`を自動でGitHub Actionsのartifactとしてアップロードし、そのダウンロードリンクをPR/Issueに別コメントで投稿する。Claude自身がコミットやアップロードを行う必要は無い。
 
 （過去に`gh issue/pr comment --attach`で直接添付する方式を試したが、claude-code-actionが使うGitHub Appのインストールトークンでは`--attach`が`unsupported authentication type`エラーで失敗するため使えない。リポジトリへのコミットも画像でリポジトリが肥大化するため避け、artifact化する方式にした。）
 
