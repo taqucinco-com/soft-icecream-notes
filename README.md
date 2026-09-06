@@ -4,3 +4,24 @@
 ## claude
 
 claudeを活用した仕様駆動開発を行う
+
+## 環境変数
+
+`.env.sample`を参考に、リポジトリ直下に`.env.local`（gitignore対象）を作成する。
+
+```
+GOOGLE_MAP_KEY={Google Maps SDKのAPIキー}
+```
+
+`mobile/`アプリの起動・ビルドは`--dart-define-from-file`でこのファイルを読み込む。
+
+```sh
+cd mobile
+fvm flutter run --dart-define-from-file=../.env.local
+```
+
+iOSでビルドする場合は、事前に`.env.local`から`ios/Flutter/Secrets.xcconfig`を生成する必要がある（Xcodeのビルド設定は個々のdart-defineを直接展開できないため）。
+
+```sh
+mobile/scripts/generate_ios_secrets.sh
+```

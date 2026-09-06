@@ -1,8 +1,22 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// --dart-define-from-file等で渡されたdart-defineは、Flutter Gradle Pluginにより
+// "dart-defines"プロパティとしてbase64エンコードされた"KEY=VALUE"のカンマ区切りで渡される。
+// ここからGOOGLE_MAP_KEYを取り出し、AndroidManifest.xmlのmanifestPlaceholdersに注入する。
+val dartDefines: Map<String, String> = (project.findProperty("dart-defines") as String?)
+    ?.split(",")
+    ?.associate {
+        val decoded = String(Base64.getDecoder().decode(it), Charsets.UTF_8)
+        val (key, value) = decoded.split("=", limit = 2)
+        key to value
+    }
+    ?: emptyMap()
 
 val ciDebugKeystore = rootProject.file("ci-debug.keystore")
 
@@ -25,6 +39,8 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        manifestPlaceholders["googleMapsApiKey"] = dartDefines["GOOGLE_MAP_KEY"] ?: ""
     }
 
     signingConfigs {
