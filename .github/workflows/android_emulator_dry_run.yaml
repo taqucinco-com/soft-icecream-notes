@@ -54,9 +54,7 @@ jobs:
           key: avd-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_AVD_TARGET }}
 
       - name: Decode Debug Keystore
-        run: |
-          mkdir -p ~/.android
-          echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > ~/.android/debug.keystore
+        run: echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > mobile/android/ci-debug.keystore
 
       - name: Set up Flutter (from mobile/.fvmrc)
         id: flutter_setup
