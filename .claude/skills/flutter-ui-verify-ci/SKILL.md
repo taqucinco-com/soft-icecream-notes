@@ -47,6 +47,14 @@ adb -s emulator-5554 shell dumpsys window | grep mCurrentFocus
 
 スクリーンショット撮影・タップ座標の正確な取得・ヒットターゲットのデバッグ・環境要因の落とし穴・Figmaワイヤーフレームとの構造比較は、`.claude/skills/flutter-ui-verify/SKILL.md`の3節以降を使う。**ただし保存先パスだけは次節の指示に従うこと**（`.claude/screenshots/<module>/`ではなく`work/screenshots/`を使う）。
 
+## マップ画面の表示待ち（CI環境の制約）
+
+`マップ`タブに遷移した直後はGoogle Mapのタイルがまだ読み込まれておらず、すぐにスクリーンショットを撮ると「表示されない」と誤判定しやすい。CI環境のエミュレータではタイル描画に10秒程度かかることがあるため、マップタブをタップしてから10秒待ってからスクリーンショットを撮ること。
+
+```bash
+sleep 10
+```
+
 ## スクリーンショットの保存先（CI環境の制約）
 
 CI環境のサンドボックスは、拡張子やサブディレクトリを問わず`.claude/`配下への書き込みを一律で「sensitive file」として拒否する。そのため`flutter-ui-verify`スキルが指示する`.claude/screenshots/<module>/`には保存できない。代わりに`work/screenshots/`に保存すること（例: `work/screenshots/develop-initial-screen.png`。ディレクトリが無ければ`mkdir -p work/screenshots`で作成する）。
