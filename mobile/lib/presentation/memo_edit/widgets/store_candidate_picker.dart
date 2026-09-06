@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../application/providers/memo_edit.dart';
+import '../../../features/memo/application/providers/memo_edit.dart';
 
 /// Figma 03フレームの「お店」欄。フォーム内インラインの候補チップとして表示し、
 /// 「手動で入力」を選ぶと自由入力欄に切り替わる（独立したダイアログ/シートにはしない）。

@@ -1,7 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+import '../../../store_search/application/di/usecase_providers.dart';
+import '../../../store_search/domain/entities/store_candidate.dart';
 import '../../domain/entities/memo.dart';
-import '../../domain/entities/store_candidate.dart';
 import '../../domain/entities/taste_rating.dart';
 import '../di/usecase_providers.dart';
 import 'memo_edit_state.dart';

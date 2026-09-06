@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../application/providers/memo_edit.dart';
+import '../../../features/memo/application/providers/memo_edit.dart';
 
 /// Figma 03フレームの「感想（箇条書き）」欄。追加・削除ができる。
 class ImpressionListEditor extends ConsumerStatefulWidget {

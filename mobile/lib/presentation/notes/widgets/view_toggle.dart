@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../application/providers/view_mode.dart';
+import '../../../features/memo/application/providers/view_mode.dart';
 
 /// Figma 01/02フレームのHeader右側にあるセグメントコントロール（リスト/マップ）。
 class ViewToggle extends ConsumerWidget {

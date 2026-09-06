@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/providers/memo_edit.dart';
-import '../../domain/entities/serving_machine.dart';
+import '../../features/memo/application/providers/memo_edit.dart';
+import '../../features/memo/domain/entities/serving_machine.dart';
 import '../format/date_format.dart';
 import 'widgets/impression_list_editor.dart';
 import 'widgets/store_candidate_picker.dart';

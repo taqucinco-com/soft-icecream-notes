@@ -41,7 +41,7 @@ final class MemoEditProvider
   }
 }
 
-String _$memoEditHash() => r'121383fa8a51e7de6080d3df5a692de227a74b59';
+String _$memoEditHash() => r'38d430fee05888bfbde4237e909bbc58a83f7f2f';
 
 abstract class _$MemoEdit extends $Notifier<MemoEditState> {
   MemoEditState build();

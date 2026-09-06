@@ -1,4 +1,4 @@
-import '../../domain/entities/store_candidate.dart';
+import '../../../store_search/domain/entities/store_candidate.dart';
 import '../../domain/entities/taste_rating.dart';
 
 class MemoEditState {

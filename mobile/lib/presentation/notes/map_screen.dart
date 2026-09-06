@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../application/providers/memo_list.dart';
-import '../../domain/entities/memo.dart';
+import '../../features/memo/application/providers/memo_list.dart';
+import '../../features/memo/domain/entities/memo.dart';
 import '../format/date_format.dart';
 
 /// APIキーが無くても確認できるよう、`google_maps_flutter`の代わりに

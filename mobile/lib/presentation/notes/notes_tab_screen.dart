@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/providers/view_mode.dart';
+import '../../features/memo/application/providers/view_mode.dart';
 import 'list_screen.dart';
 import 'map_screen.dart';
 import 'widgets/serving_machine_filter_bar.dart';

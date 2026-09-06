@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/providers/memo_list.dart';
-import '../../domain/entities/memo.dart';
+import '../../features/memo/application/providers/memo_list.dart';
+import '../../features/memo/domain/entities/memo.dart';
 import '../format/date_format.dart';
 import 'widgets/taste_radar_chart.dart';
 

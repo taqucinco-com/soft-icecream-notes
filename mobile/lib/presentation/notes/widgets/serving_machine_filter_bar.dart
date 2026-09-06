@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../application/providers/serving_machine_filter.dart';
-import '../../../domain/entities/serving_machine.dart';
+import '../../../features/memo/application/providers/serving_machine_filter.dart';
+import '../../../features/memo/domain/entities/serving_machine.dart';
 
 /// Figma 01/02フレームの「すべて / カルピジャーニ / 日世 / その他」フィルタ。
 class ServingMachineFilterBar extends ConsumerWidget {

@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../../../domain/entities/taste_rating.dart';
+import '../../../features/memo/domain/entities/taste_rating.dart';
 
 const _axisTitles = ['口当たり', '素材', '個性的', 'フレーバー', '温度'];
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../domain/entities/memo.dart';
+import '../../../features/memo/domain/entities/memo.dart';
 import '../../format/date_format.dart';
 
 class MemoCard extends StatelessWidget {

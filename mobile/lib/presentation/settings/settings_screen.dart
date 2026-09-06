@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../application/di/usecase_providers.dart';
-import '../../application/providers/app_version.dart';
-import '../../application/providers/profile.dart';
-import '../../domain/entities/user_profile.dart';
+import '../../features/profile/application/di/usecase_providers.dart';
+import '../../features/profile/application/providers/app_version.dart';
+import '../../features/profile/application/providers/profile.dart';
+import '../../features/profile/domain/entities/user_profile.dart';
 
 /// Figma 05フレーム（設定）。ニックネーム編集・アイコン変更・アプリバージョン表示（REQ-9）。
 class SettingsScreen extends ConsumerWidget {

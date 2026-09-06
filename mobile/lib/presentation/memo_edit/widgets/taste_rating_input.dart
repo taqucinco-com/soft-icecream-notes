@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../application/providers/memo_edit.dart';
-import '../../../domain/entities/taste_rating.dart';
+import '../../../features/memo/application/providers/memo_edit.dart';
+import '../../../features/memo/domain/entities/taste_rating.dart';
 
 const _defaultRating = TasteRating(
   mouthfeel: 1,
