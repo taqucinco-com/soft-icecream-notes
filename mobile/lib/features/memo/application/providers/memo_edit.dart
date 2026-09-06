@@ -1,13 +1,13 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../store_search/application/di/usecase_providers.dart';
-import '../../../store_search/domain/entities/store_candidate.dart';
-import '../../domain/entities/memo.dart';
-import '../../domain/entities/taste_rating.dart';
-import '../di/usecase_providers.dart';
-import 'memo_edit_state.dart';
+import 'package:icecream_log/features/memo/application/di/usecase_providers.dart';
+import 'package:icecream_log/features/memo/application/providers/memo_edit_state.dart';
+import 'package:icecream_log/features/memo/domain/entities/memo.dart';
+import 'package:icecream_log/features/memo/domain/entities/taste_rating.dart';
+import 'package:icecream_log/features/store_search/application/di/usecase_providers.dart';
+import 'package:icecream_log/features/store_search/domain/entities/store_candidate.dart';
 
-part 'memo_edit.g.dart';
+part 'generated/memo_edit.g.dart';
 
 @riverpod
 class MemoEdit extends _$MemoEdit {

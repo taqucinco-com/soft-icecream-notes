@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import '../../domain/entities/user_profile.dart';
-import '../../domain/repositories/profile_repository.dart';
+import 'package:icecream_log/features/profile/domain/entities/user_profile.dart';
+import 'package:icecream_log/features/profile/domain/repositories/profile_repository.dart';
 
 /// Figmaワイヤーフレーム（05_設定）の「ソフト太郎」を初期値にしたモック実装。
 class MockProfileRepository implements ProfileRepository {

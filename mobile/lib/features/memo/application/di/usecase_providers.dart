@@ -1,11 +1,11 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../domain/usecases/extract_photo_metadata_usecase.dart';
-import '../../domain/usecases/save_memo_usecase.dart';
-import '../../domain/usecases/watch_memos_usecase.dart';
-import 'repository_providers.dart';
+import 'package:icecream_log/features/memo/application/di/repository_providers.dart';
+import 'package:icecream_log/features/memo/domain/usecases/extract_photo_metadata_usecase.dart';
+import 'package:icecream_log/features/memo/domain/usecases/save_memo_usecase.dart';
+import 'package:icecream_log/features/memo/domain/usecases/watch_memos_usecase.dart';
 
-part 'usecase_providers.g.dart';
+part 'generated/usecase_providers.g.dart';
 
 @riverpod
 ExtractPhotoMetadataUseCase extractPhotoMetadataUseCase(Ref ref) {

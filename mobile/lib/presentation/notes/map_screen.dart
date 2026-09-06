@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../features/memo/application/providers/memo_list.dart';
-import '../../features/memo/domain/entities/memo.dart';
-import '../format/date_format.dart';
+import 'package:icecream_log/features/memo/application/providers/memo_list.dart';
+import 'package:icecream_log/features/memo/domain/entities/memo.dart';
+import 'package:icecream_log/presentation/format/date_format.dart';
 
 /// APIキーが無くても確認できるよう、`google_maps_flutter`の代わりに
 /// プレースホルダー画像（グレー背景＋ピン風のドット）で表現する（design.md 既知のリスク参照）。
@@ -42,8 +42,7 @@ class MapScreen extends ConsumerWidget {
                 bottom: 24,
                 child: _PreviewCard(
                   memo: pinned.first,
-                  onTap: () =>
-                      context.push('/notes/detail/${pinned.first.id}'),
+                  onTap: () => context.push('/notes/detail/${pinned.first.id}'),
                 ),
               ),
           ],

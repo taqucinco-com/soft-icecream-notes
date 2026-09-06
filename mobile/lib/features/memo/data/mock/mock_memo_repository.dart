@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import '../../domain/entities/memo.dart';
-import '../../domain/entities/serving_machine.dart';
-import '../../domain/entities/taste_rating.dart';
-import '../../domain/repositories/memo_repository.dart';
+import 'package:icecream_log/features/memo/domain/entities/memo.dart';
+import 'package:icecream_log/features/memo/domain/entities/serving_machine.dart';
+import 'package:icecream_log/features/memo/domain/entities/taste_rating.dart';
+import 'package:icecream_log/features/memo/domain/repositories/memo_repository.dart';
 
 /// Figmaワイヤーフレーム（01_メモ一覧_リスト）のサンプルデータをそのまま初期値にしたモック実装。
 /// 本物のdrift実装（[MemoRepositoryImpl]相当）が用意されるまでの間、presentation/application層を
@@ -38,9 +38,11 @@ class MockMemoRepository implements MemoRepository {
   }
 
   List<Memo> _filtered(String? servingMachineFilter) {
-    final sorted = [..._memos]..sort(
-      (a, b) => (b.eatenDate ?? DateTime(0)).compareTo(a.eatenDate ?? DateTime(0)),
-    );
+    final sorted = [..._memos]
+      ..sort(
+        (a, b) =>
+            (b.eatenDate ?? DateTime(0)).compareTo(a.eatenDate ?? DateTime(0)),
+      );
     if (servingMachineFilter == null) return sorted;
     return sorted
         .where((memo) => memo.servingMachine == servingMachineFilter)
@@ -55,11 +57,7 @@ class MockMemoRepository implements MemoRepository {
       longitude: 139.7454,
       storeName: 'ジェラテリア　テオブロマ',
       servingMachine: ServingMachine.calpigiani,
-      impressions: const [
-        'ミルク感が強く後味がすっきり',
-        'バニラの香りが上品',
-        'テクスチャがなめらか',
-      ],
+      impressions: const ['ミルク感が強く後味がすっきり', 'バニラの香りが上品', 'テクスチャがなめらか'],
       tasteRating: const TasteRating(
         mouthfeel: 4,
         ingredientUse: 5,

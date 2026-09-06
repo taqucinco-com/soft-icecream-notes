@@ -1,10 +1,10 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../domain/usecases/save_profile_usecase.dart';
-import '../../domain/usecases/watch_profile_usecase.dart';
-import 'repository_providers.dart';
+import 'package:icecream_log/features/profile/application/di/repository_providers.dart';
+import 'package:icecream_log/features/profile/domain/usecases/save_profile_usecase.dart';
+import 'package:icecream_log/features/profile/domain/usecases/watch_profile_usecase.dart';
 
-part 'usecase_providers.g.dart';
+part 'generated/usecase_providers.g.dart';
 
 @riverpod
 SaveProfileUseCase saveProfileUseCase(Ref ref) {

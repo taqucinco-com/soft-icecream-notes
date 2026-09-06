@@ -125,6 +125,9 @@ app.*.symbols
 # Track pubspec.lock for reproducible Flutter app builds (overrides the blanket *.lock rule above)
 !mobile/pubspec.lock
 
+# build_runner-generated files (riverpod .g.dart etc.); output location set in mobile/build.yaml
+**/generated/**
+
 # Ad-hoc verification screenshots (adb/simulator captures during manual testing)
 # Image files are ignored; README.md files documenting each directory's purpose stay tracked.
 .claude/screenshots/**/*.png

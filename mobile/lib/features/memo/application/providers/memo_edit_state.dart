@@ -1,5 +1,5 @@
-import '../../../store_search/domain/entities/store_candidate.dart';
-import '../../domain/entities/taste_rating.dart';
+import 'package:icecream_log/features/memo/domain/entities/taste_rating.dart';
+import 'package:icecream_log/features/store_search/domain/entities/store_candidate.dart';
 
 class MemoEditState {
   const MemoEditState({

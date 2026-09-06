@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/memo/application/providers/memo_edit.dart';
-import '../../features/memo/domain/entities/serving_machine.dart';
-import '../format/date_format.dart';
-import 'widgets/impression_list_editor.dart';
-import 'widgets/store_candidate_picker.dart';
-import 'widgets/taste_rating_input.dart';
+import 'package:icecream_log/features/memo/application/providers/memo_edit.dart';
+import 'package:icecream_log/features/memo/domain/entities/serving_machine.dart';
+import 'package:icecream_log/presentation/format/date_format.dart';
+import 'package:icecream_log/presentation/memo_edit/widgets/impression_list_editor.dart';
+import 'package:icecream_log/presentation/memo_edit/widgets/store_candidate_picker.dart';
+import 'package:icecream_log/presentation/memo_edit/widgets/taste_rating_input.dart';
 
 /// Figma 03フレーム（メモ作成編集）。フルスクリーンモーダルとして開く。
 class MemoEditScreen extends ConsumerWidget {
@@ -104,7 +104,10 @@ class _PhotoPicker extends StatelessWidget {
 }
 
 class _ServingMachinePicker extends StatefulWidget {
-  const _ServingMachinePicker({required this.selected, required this.onSelected});
+  const _ServingMachinePicker({
+    required this.selected,
+    required this.onSelected,
+  });
 
   final String? selected;
   final ValueChanged<String> onSelected;

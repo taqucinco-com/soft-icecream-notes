@@ -1,4 +1,4 @@
-import 'taste_rating.dart';
+import 'package:icecream_log/features/memo/domain/entities/taste_rating.dart';
 
 class Memo {
   const Memo({

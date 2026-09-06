@@ -1,7 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
-import '../../../features/memo/domain/entities/taste_rating.dart';
+import 'package:icecream_log/features/memo/domain/entities/taste_rating.dart';
 
 const _axisTitles = ['口当たり', '素材', '個性的', 'フレーバー', '温度'];
 
@@ -35,8 +35,7 @@ class TasteRadarChart extends StatelessWidget {
           titleTextStyle: Theme.of(
             context,
           ).textTheme.labelSmall?.copyWith(fontSize: 11),
-          getTitle: (index, angle) =>
-              RadarChartTitle(text: _axisTitles[index]),
+          getTitle: (index, angle) => RadarChartTitle(text: _axisTitles[index]),
           dataSets: [
             RadarDataSet(
               fillColor: color.withValues(alpha: 0.2),

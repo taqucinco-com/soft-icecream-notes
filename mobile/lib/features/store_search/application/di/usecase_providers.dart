@@ -1,9 +1,9 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../domain/usecases/search_nearby_stores_usecase.dart';
-import 'repository_providers.dart';
+import 'package:icecream_log/features/store_search/application/di/repository_providers.dart';
+import 'package:icecream_log/features/store_search/domain/usecases/search_nearby_stores_usecase.dart';
 
-part 'usecase_providers.g.dart';
+part 'generated/usecase_providers.g.dart';
 
 @riverpod
 SearchNearbyStoresUseCase searchNearbyStoresUseCase(Ref ref) {

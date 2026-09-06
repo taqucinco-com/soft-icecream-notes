@@ -1,10 +1,10 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../domain/entities/memo.dart';
-import '../di/usecase_providers.dart';
-import 'serving_machine_filter.dart';
+import 'package:icecream_log/features/memo/application/di/usecase_providers.dart';
+import 'package:icecream_log/features/memo/application/providers/serving_machine_filter.dart';
+import 'package:icecream_log/features/memo/domain/entities/memo.dart';
 
-part 'memo_list.g.dart';
+part 'generated/memo_list.g.dart';
 
 @riverpod
 Stream<List<Memo>> memoList(Ref ref) {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../features/profile/application/di/usecase_providers.dart';
-import '../../features/profile/application/providers/app_version.dart';
-import '../../features/profile/application/providers/profile.dart';
-import '../../features/profile/domain/entities/user_profile.dart';
+import 'package:icecream_log/features/profile/application/di/usecase_providers.dart';
+import 'package:icecream_log/features/profile/application/providers/app_version.dart';
+import 'package:icecream_log/features/profile/application/providers/profile.dart';
+import 'package:icecream_log/features/profile/domain/entities/user_profile.dart';
 
 /// Figma 05フレーム（設定）。ニックネーム編集・アイコン変更・アプリバージョン表示（REQ-9）。
 class SettingsScreen extends ConsumerWidget {
@@ -35,13 +35,14 @@ class SettingsScreen extends ConsumerWidget {
             }
           },
           onChangeIconTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('アイコン変更機能は今後実装予定です')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('アイコン変更機能は今後実装予定です')));
           },
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(child: Text('読み込みに失敗しました: $error')),
+        error: (error, stackTrace) =>
+            Center(child: Text('読み込みに失敗しました: $error')),
       ),
     );
   }
@@ -92,8 +93,9 @@ class _SettingsContentState extends State<_SettingsContent> {
             children: [
               CircleAvatar(
                 radius: 44,
-                backgroundColor:
-                    Theme.of(context).colorScheme.surfaceContainerHighest,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
                 child: Icon(
                   Icons.person,
                   size: 44,
@@ -123,10 +125,7 @@ class _SettingsContentState extends State<_SettingsContent> {
         const SizedBox(height: 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text('アプリバージョン'),
-            Text(widget.appVersion),
-          ],
+          children: [const Text('アプリバージョン'), Text(widget.appVersion)],
         ),
         const Divider(height: 32),
       ],

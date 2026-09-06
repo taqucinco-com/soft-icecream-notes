@@ -1,5 +1,5 @@
-import '../entities/memo.dart';
-import '../repositories/memo_repository.dart';
+import 'package:icecream_log/features/memo/domain/entities/memo.dart';
+import 'package:icecream_log/features/memo/domain/repositories/memo_repository.dart';
 
 class WatchMemosUseCase {
   const WatchMemosUseCase(this._repository);

@@ -1,6 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-part 'view_mode.g.dart';
+part 'generated/view_mode.g.dart';
 
 enum NotesViewMode { list, map }
 
@@ -12,6 +12,8 @@ class ViewMode extends _$ViewMode {
   void set(NotesViewMode mode) => state = mode;
 
   void toggle() {
-    state = state == NotesViewMode.list ? NotesViewMode.map : NotesViewMode.list;
+    state = state == NotesViewMode.list
+        ? NotesViewMode.map
+        : NotesViewMode.list;
   }
 }

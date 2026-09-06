@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'bottom_nav_bar.dart';
+import 'package:icecream_log/presentation/shell/bottom_nav_bar.dart';
 
 /// go_routerの`StatefulShellRoute`のbuilderに渡すシェル。
 /// 「メモ一覧」「設定」はタブとしてブランチを持つが、中央の「+」はブランチ化せず
