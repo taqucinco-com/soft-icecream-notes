@@ -28,7 +28,7 @@ android {
     }
 
     signingConfigs {
-        if (ciDebugKeystore.exists()) {
+        if (System.getenv("GITHUB_ACTIONS") == "true" && ciDebugKeystore.exists()) {
             getByName("debug") {
                 storeFile = ciDebugKeystore
                 storePassword = "android"
