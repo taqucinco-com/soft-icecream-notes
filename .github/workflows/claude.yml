@@ -38,6 +38,10 @@ jobs:
         id: ui_verify
         run: echo "enabled=${{ contains(github.event.comment.body, '[ui-verify]') || contains(github.event.review.body, '[ui-verify]') || contains(github.event.issue.body, '[ui-verify]') }}" >> "$GITHUB_OUTPUT"
 
+      - name: Upgrade gh CLI for --attach support
+        if: steps.ui_verify.outputs.enabled == 'true'
+        run: sudo apt-get update && sudo apt-get install -y gh
+
       - name: Set up JDK 17
         if: steps.ui_verify.outputs.enabled == 'true'
         uses: actions/setup-java@v4
@@ -141,4 +145,4 @@ jobs:
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*)"'
+          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh issue comment:*),Bash(gh pr comment:*)"'
