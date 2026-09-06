@@ -123,6 +123,9 @@ app.*.symbols
 # FVM Version Cache
 **/.fvm/
 
+# Local git worktrees
+.github/worktrees/
+
 # Track pubspec.lock for reproducible Flutter app builds (overrides the blanket *.lock rule above)
 !mobile/pubspec.lock
 
