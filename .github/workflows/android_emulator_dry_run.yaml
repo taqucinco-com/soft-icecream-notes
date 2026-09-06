@@ -11,6 +11,7 @@ jobs:
     env:
       ANDROID_API_LEVEL: "34"
       ANDROID_AVD_NAME: "ci_test"
+      ANDROID_AVD_TARGET: "google_apis"
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,7 +51,7 @@ jobs:
             ~/.android/avd/*
             ~/.android/adb*
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
-          key: avd-${{ env.ANDROID_API_LEVEL }}
+          key: avd-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_AVD_TARGET }}
 
       - name: Decode Debug Keystore
         run: |
@@ -89,7 +90,7 @@ jobs:
           api-level: ${{ env.ANDROID_API_LEVEL }}
           avd-name: ${{ env.ANDROID_AVD_NAME }}
           force-avd-creation: false
-          target: "google_apis"
+          target: ${{ env.ANDROID_AVD_TARGET }}
           arch: "x86_64"
           script: echo "AVD created and boot-verified by reactivecircus."
 
