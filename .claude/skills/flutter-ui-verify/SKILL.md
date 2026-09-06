@@ -1,22 +1,20 @@
 ---
 name: flutter-ui-verify
-description: Androidエミュレータ上でicecream_log(mobile/)を実機起動し、adbでのタップ操作・スクリーンショット取得・Figmaワイヤーフレームとのチェックリストに基づく構造的比較（VLMによる一致度判定）によってUI実装の妥当性を検証する。「動作確認して」「ワイヤーフレーム通りか確認して」「実機で見た目を確認して」「Figmaとどれくらい近づいたか教えて」等の依頼で使う。
+description: ローカル開発環境でAndroidエミュレータ上のicecream_log(mobile/)を実機起動し、adbでのタップ操作・スクリーンショット取得・Figmaワイヤーフレームとのチェックリストに基づく構造的比較（VLMによる一致度判定）によってUI実装の妥当性を検証する。「動作確認して」「ワイヤーフレーム通りか確認して」「実機で見た目を確認して」「Figmaとどれくらい近づいたか教えて」等の依頼で使う。GitHub Actions CI上で実行している場合は、代わりに`flutter-ui-verify-ci`スキルを使うこと（アプリの起動方法がCI環境向けに異なる）。
 ---
 
-# Flutter UI検証（icecream_log / Androidエミュレータ）
+# Flutter UI検証（icecream_log / Androidエミュレータ・ローカル環境向け）
 
-`mobile/`配下のFlutterアプリを実機（Androidエミュレータ）で起動し、adb操作とスクリーンショットで実装の見た目・挙動を検証する手順。design.mdの「Figmaワイヤーフレームとの対応関係」表にある各画面を、実装後に実際にレンダリングして確認する用途を想定している。
+`mobile/`配下のFlutterアプリを実機（Androidエミュレータ）で起動し、adb操作とスクリーンショットで実装の見た目・挙動を検証する手順。design.mdの「Figmaワイヤーフレームとの対応関係」表にある各画面を、実装後に実際にレンダリングして確認する用途を想定している。**ローカル開発環境向け**で、`fvm`経由（`fvm flutter`/`fvm dart`）での実行を前提にしている。GitHub Actions CI上で`[ui-verify]`から呼ばれた場合は、このスキルではなく`flutter-ui-verify-ci`スキルを使うこと（アプリのビルド・起動方法だけが異なり、3節以降の手順は共通）。
 
 ## 0. 前提
 
 - Androidエミュレータを使う（iOSシミュレータは使わない）。起動コマンドは `$ANDROID_HOME/emulator/emulator -avd Medium_Phone_API_35`など。Android Emulaterは起動すると `flutter devices` で `emulator-5554` として認識される。
 - スクリーンショットは必ず `.claude/screenshots/<module>/`（例: `mobile/`）配下に保存する。`mobile/`直下やリポジトリ直下には置かない（git管理対象にしないため。`.gitignore`で`.claude/screenshots/**/*.png`等が除外されている）。ディレクトリを新規作成した場合はそこにも用途を説明する`README.md`を置く。
-- CI（GitHub Actions、`.github/workflows/claude.yml`）で`@claude`コメントに`[ui-verify]`を含めて実行された場合、ワークフロー側で既にAndroidエミュレータのセットアップ・起動・`flutter pub get`/コード生成まで完了した状態でこのスキルが呼ばれる。CIでは`fvm`はインストールされていないため、`flutter`/`dart`コマンドをそのまま使う（`fvm flutter`/`fvm dart`ではない）。ローカル開発環境では`fvm`経由（`fvm flutter`/`fvm dart`）で実行する。
-- どちらの環境かは`fvm --version`が通るかで判定できる。迷ったら先に`adb devices`を実行し、既に起動済みのデバイスがあればそれを使う（＝1節の起動手順を省略してよい）。
 
-## 1. エミュレータを起動する（ローカルのみ。CIでは既に起動済みなので不要）
+## 1. エミュレータを起動する
 
-まず`adb devices`で確認し、既に`emulator-5554`等が起動済みなら本節はスキップする（CI実行時は常にこのケースに該当する）。何も見つからない場合のみ以下を実行する。
+まず`adb devices`で確認し、既に`emulator-5554`等が起動済みなら本節はスキップする。何も見つからない場合のみ以下を実行する。
 
 ```bash
 nohup "$ANDROID_HOME/emulator/emulator" -avd Medium_Phone_API_35 > /tmp/emulator.log 2>&1 &
@@ -40,7 +38,6 @@ disown
 `<flutter-cmd>`はローカルでは`fvm flutter`、CIでは`flutter`（0節参照）。以降このスキル内で「`flutter`コマンド」と書く場合はすべて同様に読み替える。
 
 `--dart-define-from-file=../.env.local`はGoogle Maps APIキー（`GOOGLE_MAP_KEY`）等のシークレットを読み込むために必須（リポジトリ直下の`.env.local`を参照。ローカルでは各自作成、CIでは`claude.yml`が`secrets.GOOGLE_MAP_KEY`から生成済み）。省略すると地図画面（`MapScreen`）が空白のまま表示される。
-
 起動完了待ち（同じく`run_in_background`+通知待ち）:
 
 ```bash

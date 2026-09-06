@@ -34,6 +34,22 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: React with eyes to acknowledge the trigger
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          case "${{ github.event_name }}" in
+            issue_comment)
+              gh api "repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" -f content=eyes || true
+              ;;
+            pull_request_review_comment)
+              gh api "repos/${{ github.repository }}/pulls/comments/${{ github.event.comment.id }}/reactions" -f content=eyes || true
+              ;;
+            issues)
+              gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/reactions" -f content=eyes || true
+              ;;
+          esac
+
       - name: Determine if UI verification (Android emulator) is requested
         id: ui_verify
         run: echo "enabled=${{ contains(github.event.comment.body, '[ui-verify]') || contains(github.event.review.body, '[ui-verify]') || contains(github.event.issue.body, '[ui-verify]') }}" >> "$GITHUB_OUTPUT"
@@ -44,6 +60,14 @@ jobs:
       - name: Create .env.local from secret
         if: steps.ui_verify.outputs.enabled == 'true'
         run: echo "GOOGLE_MAP_KEY=${{ secrets.GOOGLE_MAP_KEY }}" > .env.local
+
+      - name: Upgrade gh CLI for --attach support
+        if: steps.ui_verify.outputs.enabled == 'true'
+        run: |
+          GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+          curl -fsSL -o /tmp/gh.deb "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.deb"
+          sudo apt-get install -y /tmp/gh.deb
+          gh --version
 
       - name: Set up JDK 17
         if: steps.ui_verify.outputs.enabled == 'true'
@@ -154,4 +178,29 @@ jobs:
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(fvm:*),Bash(command:*),Bash(emulator:*),Bash(nohup:*),Bash(disown:*),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(kill:*),Bash(pgrep:*)"'
+          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*)"'
+
+      - name: Upload UI verification screenshots
+        if: steps.ui_verify.outputs.enabled == 'true'
+        id: upload_screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-verify-screenshots-${{ github.run_id }}
+          path: work/screenshots/*.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Post screenshot artifact link
+        if: steps.ui_verify.outputs.enabled == 'true' && steps.upload_screenshots.outputs.artifact-url != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_URL: ${{ steps.upload_screenshots.outputs.artifact-url }}
+        run: |
+          case "${{ github.event_name }}" in
+            issue_comment|issues)
+              gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
+              ;;
+            pull_request_review_comment|pull_request_review)
+              gh pr comment "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
+              ;;
+          esac

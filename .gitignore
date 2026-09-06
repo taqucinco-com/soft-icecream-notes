@@ -128,6 +128,9 @@ app.*.symbols
 # Local git worktrees
 .github/worktrees/
 
+# CI scratch space (e.g. ui-verify screenshots before artifact upload)
+/work/
+
 # Track pubspec.lock for reproducible Flutter app builds (overrides the blanket *.lock rule above)
 !mobile/pubspec.lock
 
