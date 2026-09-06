@@ -23,6 +23,7 @@ jobs:
     env:
       ANDROID_API_LEVEL: "34"
       ANDROID_AVD_NAME: "ci_test"
+      ANDROID_AVD_TARGET: "google_apis"
     permissions:
       contents: write
       pull-requests: write
@@ -103,7 +104,7 @@ jobs:
             ~/.android/avd/*
             ~/.android/adb*
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
-          key: avd-${{ env.ANDROID_API_LEVEL }}
+          key: avd-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_AVD_TARGET }}
 
       - name: Create .env.local from .env.sample
         if: steps.ui_verify.outputs.enabled == 'true'
@@ -153,7 +154,7 @@ jobs:
           api-level: ${{ env.ANDROID_API_LEVEL }}
           avd-name: ${{ env.ANDROID_AVD_NAME }}
           force-avd-creation: false
-          target: "google_apis"
+          target: ${{ env.ANDROID_AVD_TARGET }}
           arch: "x86_64"
           script: echo "AVD created and boot-verified by reactivecircus."
 
