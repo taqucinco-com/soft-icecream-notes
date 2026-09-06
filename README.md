@@ -19,9 +19,3 @@ GOOGLE_MAP_KEY={Google Maps SDKのAPIキー}
 cd mobile
 fvm flutter run --dart-define-from-file=../.env.local
 ```
-
-iOSでビルドする場合は、事前に`.env.local`から`ios/Flutter/Secrets.xcconfig`を生成する必要がある（Xcodeのビルド設定は個々のdart-defineを直接展開できないため）。
-
-```sh
-mobile/scripts/generate_ios_secrets.sh
-```
