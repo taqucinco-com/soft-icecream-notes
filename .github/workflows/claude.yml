@@ -173,9 +173,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ui-verify-screenshots-${{ github.run_id }}
-          path: .claude/screenshots/mobile/*.png
+          path: work/screenshots/*.png
           if-no-files-found: ignore
-          include-hidden-files: true
           retention-days: 14
 
       - name: Post screenshot artifact link
