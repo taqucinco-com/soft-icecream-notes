@@ -66,21 +66,10 @@ adb -s emulator-5554 exec-out screencap -p > work/screenshots/<name>.png
 
 `Run Claude Code`ステップの後続で、ワークフロー（`claude.yml`）側がこのディレクトリの`*.png`を自動でGitHub Actionsのartifactとしてアップロードし、そのダウンロードリンクをPR/Issueに別コメントで投稿する。Claude自身がコミットやアップロードを行う必要は無い。
 
-（過去に`gh issue/pr comment --attach`で直接添付する方式を試したが、claude-code-actionが使うGitHub Appのインストールトークンでは`--attach`が`unsupported authentication type`エラーで失敗するため使えない。リポジトリへのコミットも画像でリポジトリが肥大化するため避け、artifact化する方式にした。）
+## スクリーンショットの視覚的分析（VLMによる評価・JSON）
 
-## スクリーンショットの視覚的分析結果（JSON）
+目視確認・VLMによる構造的評価・JSON形式での記録は、`flutter-ui-verify`スキルの7節（Figmaワイヤーフレームとの構造的比較）の手順・チェックリスト・JSON形式（`criteria`配列、`overall_verdict`等）をそのまま使うこと。CI固有の差分はスクリーンショットの保存先パスのみ（`.claude/screenshots/<module>/`ではなく`work/screenshots/`を使う）。
 
-スクリーンショットをReadツールで開いて目視確認した内容を、文章だけでなく機械可読なJSONとしても`--body`に含めること（Figmaワイヤーフレームとの構造比較とは別物で、Figma比較を行っていない単純な起動確認でも毎回作成する）。
+Figma参照画像との比較を伴わない単純な起動確認の場合も、同じチェックリスト・JSON形式を流用する。比較対象が無い観点は`not_applicable`とし、`figma_node_id`・`reference_image`はFigma参照を取得していないことがわかるよう`null`にする。これにより、ローカル・CIのどちらで検証しても同じ基準・同じ形式の結果が得られる。
 
-```json
-{
-  "screenshot": "<name>.png",
-  "checked_at": "<ISO8601日時>",
-  "check_request": "<今回確認しようとした内容の短い説明>",
-  "observed_elements": ["画面上で確認できた主要な要素を列挙（日本語で簡潔に）"],
-  "anomalies": ["クラッシュ・白画面・ローディング停止・意図しないダイアログ等があれば記述。無ければ空配列"],
-  "verdict": "ok"
-}
-```
-
-`verdict`は異常が無ければ`ok`、`observed_elements`や`anomalies`から見て何らかの問題がある場合は`anomaly_detected`とする。このJSONは`--body`の本文中にコードフェンス付きで埋め込む（`--attach`は画像/動画専用のため、JSONの添付には使えない）。
+このJSONは`--body`の本文中にコードフェンス付きで埋め込む（`--attach`は画像/動画専用のため、JSONの添付には使えない）。
