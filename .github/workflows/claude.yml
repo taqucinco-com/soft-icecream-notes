@@ -34,6 +34,22 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: React with eyes to acknowledge the trigger
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          case "${{ github.event_name }}" in
+            issue_comment)
+              gh api "repos/${{ github.repository }}/issues/comments/${{ github.event.comment.id }}/reactions" -f content=eyes || true
+              ;;
+            pull_request_review_comment)
+              gh api "repos/${{ github.repository }}/pulls/comments/${{ github.event.comment.id }}/reactions" -f content=eyes || true
+              ;;
+            issues)
+              gh api "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/reactions" -f content=eyes || true
+              ;;
+          esac
+
       - name: Determine if UI verification (Android emulator) is requested
         id: ui_verify
         run: echo "enabled=${{ contains(github.event.comment.body, '[ui-verify]') || contains(github.event.review.body, '[ui-verify]') || contains(github.event.issue.body, '[ui-verify]') }}" >> "$GITHUB_OUTPUT"
