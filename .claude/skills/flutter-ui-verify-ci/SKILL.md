@@ -20,7 +20,7 @@ CIの`claude`ジョブ（`.github/workflows/claude.yml`）は非対話的なBash
 ## アプリをビルド・インストール・起動する
 
 ```bash
-cd mobile && flutter build apk --debug
+cd mobile && flutter build apk --debug --dart-define-from-file=../.env.local
 ```
 
 ```bash

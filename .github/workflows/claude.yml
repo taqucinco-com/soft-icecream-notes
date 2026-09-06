@@ -19,6 +19,7 @@ jobs:
       (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    environment: develop
     env:
       ANDROID_API_LEVEL: "34"
       ANDROID_AVD_NAME: "ci_test"
@@ -104,6 +105,12 @@ jobs:
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
           key: avd-${{ env.ANDROID_API_LEVEL }}
 
+      - name: Create .env.local from .env.sample
+        if: steps.ui_verify.outputs.enabled == 'true'
+        env:
+          GOOGLE_MAP_KEY: ${{ secrets.GOOGLE_MAP_KEY }}
+        run: sed "s/{YOUR_GOOGLE_MAP_KEY_HERE}/$GOOGLE_MAP_KEY/" .env.sample > .env.local
+
       - name: Decode Debug Keystore
         if: steps.ui_verify.outputs.enabled == 'true'
         run: |
@@ -146,7 +153,7 @@ jobs:
           api-level: ${{ env.ANDROID_API_LEVEL }}
           avd-name: ${{ env.ANDROID_AVD_NAME }}
           force-avd-creation: false
-          target: "default"
+          target: "google_apis"
           arch: "x86_64"
           script: echo "AVD created and boot-verified by reactivecircus."
 
