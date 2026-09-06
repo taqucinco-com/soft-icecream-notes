@@ -57,11 +57,13 @@ sleep 10
 
 ## スクリーンショットの保存先（CI環境の制約）
 
-CI環境のサンドボックスは、拡張子やサブディレクトリを問わず`.claude/`配下への書き込みを一律で「sensitive file」として拒否する。そのため`flutter-ui-verify`スキルが指示する`.claude/screenshots/<module>/`には保存できない。代わりに`work/screenshots/`に保存すること（例: `work/screenshots/develop-initial-screen.png`。ディレクトリが無ければ`mkdir -p work/screenshots`で作成する）。
+CI環境のサンドボックスは、拡張子やサブディレクトリを問わず`.claude/`配下への書き込みを一律で「sensitive file」として拒否する。そのため`flutter-ui-verify`スキルが指示する`.claude/screenshots/<module>/`には保存できない。代わりに、ワークフローのチェックアウト先（`$GITHUB_WORKSPACE`）直下の`work/screenshots/`に保存すること。
+
+**必ず`$GITHUB_WORKSPACE`からの絶対パスで書き込むこと。** 本スキルの他のコマンド（`cd mobile && flutter build ...`等）を実行すると、このBashツールは作業ディレクトリがコマンドをまたいで持続する仕様のため、以降のコマンドは`mobile/`に居続けたまま実行される。その状態で相対パス`work/screenshots/<name>.png`に書き込むと、実際には`mobile/work/screenshots/`に保存されてしまい、ワークフロー側の`actions/upload-artifact`（`path: work/screenshots/*.png`、リポジトリルート基準）が何も見つけられず、artifactが作成されない（実際にこの事故が発生したことがある）。
 
 ```bash
-mkdir -p work/screenshots
-adb -s emulator-5554 exec-out screencap -p > work/screenshots/<name>.png
+mkdir -p "$GITHUB_WORKSPACE/work/screenshots"
+adb -s emulator-5554 exec-out screencap -p > "$GITHUB_WORKSPACE/work/screenshots/<name>.png"
 ```
 
 `Run Claude Code`ステップの後続で、ワークフロー（`claude.yml`）側がこのディレクトリの`*.png`を自動でGitHub Actionsのartifactとしてアップロードし、そのダウンロードリンクをPR/Issueに別コメントで投稿する。Claude自身がコミットやアップロードを行う必要は無い。
