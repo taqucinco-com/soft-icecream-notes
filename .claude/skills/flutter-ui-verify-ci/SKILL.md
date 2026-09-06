@@ -64,3 +64,20 @@ gh pr comment <PR番号> --body "<結果の説明>" --attach .claude/screenshots
 ```
 
 `--attach`は繰り返し指定でき、最大50ファイルまで添付できる。`#<説明>`部分は省略可能（省略時はファイル名が代替テキストになる）。
+
+## スクリーンショットの視覚的分析結果（JSON）
+
+スクリーンショットをReadツールで開いて目視確認した内容を、文章だけでなく機械可読なJSONとしても`--body`に含めること（Figmaワイヤーフレームとの構造比較とは別物で、Figma比較を行っていない単純な起動確認でも毎回作成する）。
+
+```json
+{
+  "screenshot": "<name>.png",
+  "checked_at": "<ISO8601日時>",
+  "check_request": "<今回確認しようとした内容の短い説明>",
+  "observed_elements": ["画面上で確認できた主要な要素を列挙（日本語で簡潔に）"],
+  "anomalies": ["クラッシュ・白画面・ローディング停止・意図しないダイアログ等があれば記述。無ければ空配列"],
+  "verdict": "ok"
+}
+```
+
+`verdict`は異常が無ければ`ok`、`observed_elements`や`anomalies`から見て何らかの問題がある場合は`anomaly_detected`とする。このJSONは`--body`の本文中にコードフェンス付きで埋め込む（`--attach`は画像/動画専用のため、JSONの添付には使えない）。

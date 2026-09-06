@@ -40,7 +40,11 @@ jobs:
 
       - name: Upgrade gh CLI for --attach support
         if: steps.ui_verify.outputs.enabled == 'true'
-        run: sudo apt-get update && sudo apt-get install -y gh
+        run: |
+          GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+          curl -fsSL -o /tmp/gh.deb "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.deb"
+          sudo apt-get install -y /tmp/gh.deb
+          gh --version
 
       - name: Set up JDK 17
         if: steps.ui_verify.outputs.enabled == 'true'
