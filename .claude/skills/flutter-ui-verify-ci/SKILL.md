@@ -47,23 +47,11 @@ adb -s emulator-5554 shell dumpsys window | grep mCurrentFocus
 
 スクリーンショット撮影・タップ座標の正確な取得・ヒットターゲットのデバッグ・環境要因の落とし穴・Figmaワイヤーフレームとの構造比較は、`.claude/skills/flutter-ui-verify/SKILL.md`の3節以降をそのまま使う。
 
-## 結果コメントへのスクリーンショット添付
+## スクリーンショットの共有方法
 
-CI上での検証結果は、PR/Issueへの最終コメントに文章で結論を書くだけでなく、検証に使ったスクリーンショットも画像として埋め込むこと。リポジトリへのコミットは不要（画像でリポジトリを肥大化させない）。`gh`コマンドの`--attach`オプションで、人間がWeb UIから画像を貼り付けるのと同じ方法（GitHubのuser-attachmentsとしてアップロード）でコメントに直接添付できる。
+検証に使ったスクリーンショットは`.claude/screenshots/mobile/<name>.png`に保存しておくこと。それ以上の作業（コミットやアップロード）はClaude自身が行う必要は無い。`Run Claude Code`ステップの後続で、ワークフロー（`claude.yml`）側がこのディレクトリの`*.png`を自動でGitHub Actionsのartifactとしてアップロードし、そのダウンロードリンクをPR/Issueに別コメントで投稿する。
 
-Issueの場合:
-
-```bash
-gh issue comment <issue番号> --body "<結果の説明>" --attach .claude/screenshots/mobile/<name>.png#<説明>
-```
-
-PRの場合:
-
-```bash
-gh pr comment <PR番号> --body "<結果の説明>" --attach .claude/screenshots/mobile/<name>.png#<説明>
-```
-
-`--attach`は繰り返し指定でき、最大50ファイルまで添付できる。`#<説明>`部分は省略可能（省略時はファイル名が代替テキストになる）。
+（過去に`gh issue/pr comment --attach`で直接添付する方式を試したが、claude-code-actionが使うGitHub Appのインストールトークンでは`--attach`が`unsupported authentication type`エラーで失敗するため使えない。リポジトリへのコミットも画像でリポジトリが肥大化するため避け、artifact化する方式にした。）
 
 ## スクリーンショットの視覚的分析結果（JSON）
 

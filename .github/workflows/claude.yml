@@ -165,4 +165,30 @@ jobs:
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh issue comment:*),Bash(gh pr comment:*)"'
+          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*)"'
+
+      - name: Upload UI verification screenshots
+        if: steps.ui_verify.outputs.enabled == 'true'
+        id: upload_screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-verify-screenshots-${{ github.run_id }}
+          path: .claude/screenshots/mobile/*.png
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 14
+
+      - name: Post screenshot artifact link
+        if: steps.ui_verify.outputs.enabled == 'true' && steps.upload_screenshots.outputs.artifact-url != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_URL: ${{ steps.upload_screenshots.outputs.artifact-url }}
+        run: |
+          case "${{ github.event_name }}" in
+            issue_comment|issues)
+              gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
+              ;;
+            pull_request_review_comment|pull_request_review)
+              gh pr comment "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
+              ;;
+          esac
