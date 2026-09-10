@@ -1,6 +1,14 @@
 # soft-icecream-notes
 食べたソフトクリームの写真からメモを作成するアプリ
 
+## 初期設定
+
+```sh
+rbenv install
+rbenv rehash
+bundle install
+```
+
 ## claude
 
 claudeを活用した仕様駆動開発を行う
@@ -17,5 +25,7 @@ GOOGLE_MAP_KEY={Google Maps SDKのAPIキー}
 
 ```sh
 cd mobile
-fvm flutter run --dart-define-from-file=../.env.local
+# iOSの場合は事前にビルド
+fvm flutter build ios --dart-define-from-file=.env.sample
+fvm flutter run --dart-define-from-file=.env.local
 ```
