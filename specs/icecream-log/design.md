@@ -26,7 +26,7 @@
 |---|---|---|
 | 店舗候補検索 | Google Places API (Nearby Search) | 日本国内の小規模店舗も含めた網羅性・精度を優先 |
 | 店舗検索結果キャッシュ | drift（`StoreSearchCache`テーブル、TTL既定30日） | APIコスト削減のため、アプリ再起動をまたいで永続化する |
-| 地図表示 | Google Maps (`google_maps_flutter`) | 表示品質・情報量を優先 |
+| 地図表示 | Google Maps (`google_maps_flutter`) | 表示品質・情報量を優先(https://codelabs.developers.google.com/codelabs/google-maps-in-flutter?hl=ja#3) |
 | ローカルDB | SQLite (`drift`) | フィルタ・検索条件をSQLで型安全に表現できる |
 | 状態管理 | Riverpod | Flutterで標準的で、非同期のDB/API呼び出しとの相性が良い |
 | Exif読み取り | `exif` パッケージ（Dart実装） | ネイティブ依存が少なく日時・GPSタグの読み取りに十分 |
