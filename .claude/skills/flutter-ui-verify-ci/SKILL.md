@@ -20,8 +20,10 @@ CIの`claude`ジョブ（`.github/workflows/claude.yml`）は非対話的なBash
 ## アプリをビルド・インストール・起動する
 
 ```bash
-cd mobile && flutter build apk --debug --dart-define-from-file=../.env.local
+cd mobile && flutter build apk --debug --dart-define-from-file=.env.local
 ```
+
+`.env.local`は`mobile/`直下（ローカルと同じ位置）。`claude.yml`の"Create mobile/.env.local from .env.sample"ステップが`mobile/.env.sample`から生成済みなので、このスキル側で作る必要はない。
 
 ```bash
 cd mobile && adb -s emulator-5554 install -r build/app/outputs/flutter-apk/app-debug.apk

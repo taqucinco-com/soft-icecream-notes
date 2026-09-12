@@ -56,12 +56,19 @@ jobs:
         id: ui_verify
         run: echo "enabled=${{ contains(github.event.comment.body, '[ui-verify]') || contains(github.event.review.body, '[ui-verify]') || contains(github.event.issue.body, '[ui-verify]') }}" >> "$GITHUB_OUTPUT"
 
-      # .env.localはgitignore対象なので、--dart-define-from-fileで使う分をCI上で
-      # GitHub Actions Secretsから生成する（ローカル開発時に手元の.env.localを使うのと同じ形）。
-      # Claudeがこのjob内でflutter build/runする際は --dart-define-from-file=../.env.local を使う。
-      - name: Create .env.local from secret
+      # mobile/.env.localはgitignore対象なので、--dart-define-from-fileで使う分をCI上で
+      # GitHub Actions Secretsから生成する（ローカル開発時に手元のmobile/.env.localを使うのと同じ形）。
+      # キーの一覧はmobile/.env.sampleが正なので、プレースホルダを置換する形で作る。
+      # Claudeがこのjob内でflutter build/runする際は cd mobile して --dart-define-from-file=.env.local を使う。
+      - name: Create mobile/.env.local from .env.sample
         if: steps.ui_verify.outputs.enabled == 'true'
-        run: echo "GOOGLE_MAP_KEY=${{ secrets.GOOGLE_MAP_KEY }}" > .env.local
+        env:
+          GOOGLE_MAP_KEY_ANDROID: ${{ secrets.GOOGLE_MAP_KEY_ANDROID }}
+          GOOGLE_MAP_KEY_IOS: ${{ secrets.GOOGLE_MAP_KEY_IOS }}
+        run: |
+          sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|$GOOGLE_MAP_KEY_ANDROID|" \
+              -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|$GOOGLE_MAP_KEY_IOS|" \
+              mobile/.env.sample > mobile/.env.local
 
       - name: Upgrade gh CLI for --attach support
         if: steps.ui_verify.outputs.enabled == 'true'
@@ -105,12 +112,6 @@ jobs:
             ~/.android/adb*
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
           key: avd-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_AVD_TARGET }}
-
-      - name: Create .env.local from .env.sample
-        if: steps.ui_verify.outputs.enabled == 'true'
-        env:
-          GOOGLE_MAP_KEY: ${{ secrets.GOOGLE_MAP_KEY }}
-        run: sed "s/{YOUR_GOOGLE_MAP_KEY_HERE}/$GOOGLE_MAP_KEY/" .env.sample > .env.local
 
       - name: Decode Debug Keystore
         if: steps.ui_verify.outputs.enabled == 'true'

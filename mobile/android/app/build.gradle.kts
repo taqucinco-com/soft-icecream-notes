@@ -8,7 +8,7 @@ plugins {
 
 // --dart-define-from-file等で渡されたdart-defineは、Flutter Gradle Pluginにより
 // "dart-defines"プロパティとしてbase64エンコードされた"KEY=VALUE"のカンマ区切りで渡される。
-// ここからGOOGLE_MAP_KEYを取り出し、AndroidManifest.xmlのmanifestPlaceholdersに注入する。
+// ここからGOOGLE_MAP_KEY_ANDROIDを取り出し、AndroidManifest.xmlのmanifestPlaceholdersに注入する。
 val dartDefines: Map<String, String> = (project.findProperty("dart-defines") as String?)
     ?.split(",")
     ?.associate {
@@ -40,7 +40,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
 
-        manifestPlaceholders["googleMapsApiKey"] = dartDefines["GOOGLE_MAP_KEY"] ?: ""
+        manifestPlaceholders["googleMapsApiKey"] = dartDefines["GOOGLE_MAP_KEY_ANDROID"] ?: ""
     }
 
     signingConfigs {
