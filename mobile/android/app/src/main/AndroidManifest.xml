@@ -31,7 +31,7 @@
             android:name="flutterEmbedding"
             android:value="2" />
         <!-- google_maps_flutter用のAPIキー。値はbuild.gradle.ktsが
-             dart defineで渡されたGOOGLE_MAP_KEYから
+             dart defineで渡されたGOOGLE_MAP_KEY_ANDROIDから
              manifestPlaceholdersとして注入する。 -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"

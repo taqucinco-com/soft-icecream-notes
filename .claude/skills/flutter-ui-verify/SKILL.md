@@ -1,6 +1,6 @@
 ---
 name: flutter-ui-verify
-description: ローカル開発環境でAndroidエミュレータ上のicecream_log(mobile/)を実機起動し、adbでのタップ操作・スクリーンショット取得・Figmaワイヤーフレームとのチェックリストに基づく構造的比較（VLMによる一致度判定）によってUI実装の妥当性を検証する。「動作確認して」「ワイヤーフレーム通りか確認して」「実機で見た目を確認して」「Figmaとどれくらい近づいたか教えて」等の依頼で使う。GitHub Actions CI上で実行している場合は、代わりに`flutter-ui-verify-ci`スキルを使うこと（アプリの起動方法がCI環境向けに異なる）。
+description: ローカル開発環境でAndroidエミュレータ上のicecream_log(mobile/)を実機起動し、adbでのタップ操作・スクリーンショット取得・Figmaワイヤーフレームとのチェックリストに基づく構造的比較（VLMによる一致度判定）によってUI実装の妥当性を検証する。「動作確認して」「ワイヤーフレーム通りか確認して」「実機で見た目を確認して」「Figmaとどれくらい近づいたか教えて」等の依頼で使う。依頼にiOS/シミュレータ/idbへの言及がある場合は代わりに`flutter-ui-ios-verify`スキルを、GitHub Actions CI上で実行している場合は`flutter-ui-verify-ci`スキルを使うこと（いずれもアプリの起動方法・操作コマンドが異なる）。
 ---
 
 # Flutter UI検証（icecream_log / Androidエミュレータ・ローカル環境向け）
@@ -9,7 +9,7 @@ description: ローカル開発環境でAndroidエミュレータ上のicecream_
 
 ## 0. 前提
 
-- Androidエミュレータを使う（iOSシミュレータは使わない）。起動コマンドは `$ANDROID_HOME/emulator/emulator -avd Medium_Phone_API_35`など。Android Emulaterは起動すると `flutter devices` で `emulator-5554` として認識される。
+- Androidエミュレータを使う（iOSシミュレータで検証する場合はこのスキルではなく`flutter-ui-ios-verify`スキルを使う）。起動コマンドは `$ANDROID_HOME/emulator/emulator -avd Medium_Phone_API_35`など。Android Emulaterは起動すると `flutter devices` で `emulator-5554` として認識される。
 - スクリーンショットは必ず `.claude/screenshots/<module>/`（例: `mobile/`）配下に保存する。`mobile/`直下やリポジトリ直下には置かない（git管理対象にしないため。`.gitignore`で`.claude/screenshots/**/*.png`等が除外されている）。ディレクトリを新規作成した場合はそこにも用途を説明する`README.md`を置く。
 
 ## 1. エミュレータを起動する
@@ -31,13 +31,15 @@ until adb devices | grep -q "emulator-5554.*device$"; do sleep 2; done
 
 ```bash
 cd mobile
-nohup <flutter-cmd> run -d emulator-5554 --dart-define-from-file=../.env.local > /tmp/flutter_run.log 2>&1 &
+nohup <flutter-cmd> run -d emulator-5554 --dart-define-from-file=.env.local > /tmp/flutter_run.log 2>&1 &
 disown
 ```
 
 `<flutter-cmd>`はローカルでは`fvm flutter`、CIでは`flutter`（0節参照）。以降このスキル内で「`flutter`コマンド」と書く場合はすべて同様に読み替える。
 
-`--dart-define-from-file=../.env.local`はGoogle Maps APIキー（`GOOGLE_MAP_KEY`）等のシークレットを読み込むために必須（リポジトリ直下の`.env.local`を参照。ローカルでは各自作成、CIでは`claude.yml`が`secrets.GOOGLE_MAP_KEY`から生成済み）。省略すると地図画面（`MapScreen`）が空白のまま表示される。
+`--dart-define-from-file=.env.local`はGoogle Maps APIキー（Androidは`GOOGLE_MAP_KEY_ANDROID`）等のシークレットを読み込むために必須。省略すると地図画面（`MapScreen`）が空白のまま表示される。
+
+**`.env.local`は`mobile/`直下にある**（雛形は`mobile/.env.sample`）。リポジトリ直下ではないので`../`を付けない。ローカルでは各自作成、CIでは`claude.yml`が`mobile/.env.sample`とSecretsから生成するので、位置はローカル・CIで共通。
 起動完了待ち（同じく`run_in_background`+通知待ち）:
 
 ```bash
