@@ -56,15 +56,8 @@ jobs:
 
       # idbはHomebrewのfacebook/fbタップから入れる（READMEのpip3 install fb-idbではなく、
       # 手元の環境と同じidb-cli formulaを使う）。
-      # idb-companionはソースビルドではなく、GitHub Releasesの配布バイナリを展開するだけ。
       - name: Install idb
         env:
-          # `brew tap`は実行前にHomebrew自体の自動更新(homebrew/coreの取得)を行う。これが
-          # 非TTYでは何も出力しないまま2分15秒かかっており、Install idbの所要時間の大半を
-          # 占めていた（実際のtap〜installは35秒程度、ダウンロードは1秒未満）。
-          # ランナーイメージのHomebrewは十分新しく、必要なpython@3.14も導入済みなので更新は不要。
-          # なおHomebrewのmanは「これを設定して新しいtapを追加すると構成が壊れることがある」と
-          # 注意している。tapやformulaが増えて解決に失敗するようになったら、この行を外す。
           HOMEBREW_NO_AUTO_UPDATE: "1"
         run: |
           brew tap facebook/fb
