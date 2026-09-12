@@ -1,9 +1,7 @@
 name: AWS OIDC
 
 on:
-  push:
-    branches:
-      - "main"
+  workflow_dispatch:
 
 permissions:
   id-token: write
@@ -17,13 +15,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set environment variables based on branch
-        id: set-vars
-        run: echo "ASSUME_ROLE=${{  }}" >> $GITHUB_ENV
-
-      - name: Debug Variables
-        run: echo "ASSUME_ROLE=${{ env.ASSUME_ROLE }}"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
