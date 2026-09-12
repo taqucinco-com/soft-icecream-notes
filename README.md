@@ -119,6 +119,79 @@ aws secretsmanager get-secret-value \
     --secret-id "taqucinco-com/soft-icecream-notes/secrets"
 ```
 
+## parameter登録
+
+```sh
+aws ssm put-parameter \
+    --name "/taqucinco-com/soft-icecream-notes/example" \
+    --description "taqucinco-com/soft-icecream-notesのparameter" \
+    --value "Password123!" \
+    --type "SecureString"
+```
+
+## parameter取得
+
+```sh
+aws ssm get-parameter \
+    --name "/taqucinco-com/soft-icecream-notes/example" \
+    --with-decryption
+```
+
+## ロールへのポリシーのアタッチ
+
+GitHub Actions用のIAMロール（`github-taqucinco-com-soft-icecream-notes-oidc`）に、Secrets ManagerやParameter Storeを読むための権限を付与する方法。
+
+### 既存のポリシー（マネージドポリシー）をアタッチする場合
+
+AWSが用意しているマネージドポリシーをそのままアタッチする方法。手軽だが権限の範囲が広くなりがち（例えばSecrets Manager内の全シークレットを読めてしまう）。
+
+```sh
+aws iam attach-role-policy \
+    --role-name github-taqucinco-com-soft-icecream-notes-oidc \
+    --policy-arn arn:aws:iam::aws:policy/AWSSecretsManagerClientReadOnlyAccess
+```
+
+### インラインポリシーをアタッチする場合
+
+特定のリソース（今回のparameter 1件）だけに絞った最小権限のポリシーをその場で作成してアタッチする方法。Parameter StoreのSecureStringは、値の復号に`ssm:GetParameter`だけでなく暗号化に使われたKMSキーへの`kms:Decrypt`権限も必要になる点に注意。`<KMS_KEY_ID>`は次のコマンドで調べられる（SecureStringを作成時にKMSキーを指定していなければ、デフォルトでAWS管理キー`alias/aws/ssm`が使われる）。
+
+```sh
+aws kms describe-key --key-id "alias/aws/ssm" --query "KeyMetadata.KeyId" --output text
+```
+
+```sh
+cat > ssm-read-policy.json << 'EOF'
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "ssm:GetParameter",
+            "Resource": "arn:aws:ssm:ap-northeast-1:<AWS_ACCOUNT_ID>:parameter/taqucinco-com/soft-icecream-notes/example"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "kms:Decrypt",
+            "Resource": "arn:aws:kms:ap-northeast-1:<AWS_ACCOUNT_ID>:key/<KMS_KEY_ID>"
+        }
+    ]
+}
+EOF
+
+aws iam put-role-policy \
+    --role-name github-taqucinco-com-soft-icecream-notes-oidc \
+    --policy-name SSMParameterStoreReadExample \
+    --policy-document file://ssm-read-policy.json
+```
+
+反映されたインラインポリシーの確認:
+
+```sh
+aws iam get-role-policy \
+    --role-name github-taqucinco-com-soft-icecream-notes-oidc \
+    --policy-name SSMParameterStoreReadExample
+```
+
 ## AWS OIDCの設定確認
 
 GitHub Actionsからのディスパッチの履歴をAdministrator Accessで確認できる。
