@@ -56,8 +56,9 @@ jobs:
 
       # idbはHomebrewのfacebook/fbタップから入れる（READMEのpip3 install fb-idbではなく、
       # 手元の環境と同じidb-cli formulaを使う）。
-      # idb-companionはソースビルドではなく、GitHub Releasesの配布バイナリを展開するだけ。
       - name: Install idb
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
         run: |
           brew tap facebook/fb
           # 新しいHomebrewは非公式タップの明示的なtrustを要求する。未対応バージョンでは
@@ -65,6 +66,10 @@ jobs:
           brew trust --tap facebook/fb || echo "brew trust は未対応（このバージョンでは不要）"
           brew install facebook/fb/idb-companion facebook/fb/idb-cli
           idb_companion --version
+      # 注意: `simctl bootstatus`は、すでにBooted状態のデバイスに対しては
+      # "Device already booted, nothing to do." を返して即座に終了し、何も検証しない。
+      # 起動開始から時間が経っているとここは素通りするので、これを準備完了の保証として
+      # 扱ってはいけない。実際の関門は後段の "Wait until idb can read the UI"。
       - name: Wait for simulator boot
         run: xcrun simctl bootstatus "$SIMULATOR_UDID"
 
@@ -74,18 +79,33 @@ jobs:
           idb connect "$SIMULATOR_UDID"
           idb list-targets | grep "$SIMULATOR_UDID"
 
-      - name: Capture screenshot before tap
+      # `idb connect`直後の最初のアクセシビリティ要求は失敗する。ホーム画面の描画は
+      # 終わっていても、
+      #   No translation object returned for simulator. ...
+      # を返して終了コード1・出力0バイトになる（手元のmacOSでも同じ順序で再現した）。
+      # 1秒後に再試行すると成功するので、初回だけの初期化の問題とみて再試行で待つ。
+      #
+      # 終了コードだけでは「idbが実際に画面を読めているか」が分からないため、ここで取得した
+      # アクセシビリティツリーをアーティファクトにも残す。以降のステップは準備完了を前提にできる。
+      - name: Wait until idb can read the UI
         run: |
           mkdir -p "$ARTIFACT_DIR"
-          xcrun simctl io "$SIMULATOR_UDID" screenshot "$ARTIFACT_DIR/before-tap.png"
+          for i in $(seq 1 30); do
+            if idb ui describe-all --udid "$SIMULATOR_UDID" > "$ARTIFACT_DIR/describe-all.json" 2>"$ARTIFACT_DIR/describe-all.err" \
+               && [ -s "$ARTIFACT_DIR/describe-all.json" ]; then
+              echo "アクセシビリティツリーを取得（試行 ${i} 回目）"
+              echo "要素数: $(jq '[.[] | select(.AXLabel != null)] | length' "$ARTIFACT_DIR/describe-all.json")"
+              jq -r '[.[] | select(.AXLabel != null)][] | "\(.type)\t\(.AXLabel)"' "$ARTIFACT_DIR/describe-all.json"
+              exit 0
+            fi
+            echo "試行 ${i}: まだ取得できない（$(head -1 "$ARTIFACT_DIR/describe-all.err")）"
+            sleep 2
+          done
+          echo "60秒待ってもアクセシビリティツリーを取得できなかった" >&2
+          exit 1
 
-      # 終了コードだけでは「idbが実際に画面を読めているか」が分からないので、
-      # アクセシビリティツリーも採取してアーティファクトに含める。
-      - name: Dump accessibility tree
-        run: |
-          idb ui describe-all --udid "$SIMULATOR_UDID" > "$ARTIFACT_DIR/describe-all.json"
-          echo "取得した要素数: $(jq '[.[] | select(.AXLabel != null)] | length' "$ARTIFACT_DIR/describe-all.json")"
-          jq -r '[.[] | select(.AXLabel != null)][] | "\(.type)\t\(.AXLabel)"' "$ARTIFACT_DIR/describe-all.json"
+      - name: Capture screenshot before tap
+        run: xcrun simctl io "$SIMULATOR_UDID" screenshot "$ARTIFACT_DIR/before-tap.png"
 
       - name: Tap with idb
         run: idb ui tap --udid "$SIMULATOR_UDID" 20 200
