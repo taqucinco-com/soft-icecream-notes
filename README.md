@@ -78,8 +78,25 @@ brew install mobile-dev-inc/tap/maestro
 # https://docs.maestro.dev/get-started/quickstart#ios にある通りdmgをダウンロード
 maestro studio
 
+# 実行するシミュレータのUDIDを控える（Booted のものを使う）
+xcrun simctl list devices booted
+# 起動していなければ Simulator.app を開くか、maestroに作らせる
+# 指定できるモデル名・OS名は `maestro list-devices` で確認できる
+maestro start-device --platform ios --device-model iPhone-17 --device-os iOS-26-5
+
+# maestroはビルドをせず、インストール済みのアプリをappIdで起動するだけなので、
+# 先にシミュレータ向けにビルドしてインストールしておく
+cd mobile
+fvm flutter build ios --simulator --dart-define-from-file=.env.local
+xcrun simctl install {UDID} build/ios/iphonesimulator/Runner.app
+cd ..
+
 # maestro cli
 maestro test ./mobile/test/e2e/maestro/page_transfar.yaml --udid={UDID}
 ```
+
+`idb connect`に相当する接続コマンドはmaestroには無い（`maestro --help`のコマンド一覧にも存在しない）。
+maestroは自分でデバイスを探すので、**シミュレータが起動していて、アプリがインストール済み**でありさえすればよい。
+`--udid`に渡すのはその起動済みシミュレータのUDID。
 
 https://github.com/user-attachments/assets/158512b7-e83d-43e3-a109-ac28ab2ea8d0
