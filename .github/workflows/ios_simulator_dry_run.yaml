@@ -109,7 +109,9 @@ jobs:
         working-directory: mobile
         run: |
           flutter devices
-          xcrun simctl list devices available
+          # ランナー上の全シミュレータが数十行出るだけで、検証には使っていないので止めている。
+          # デバイスが見つからない類の調査をするときだけ戻す。
+          # xcrun simctl list devices available
 
       # Androidと同じテストを同じ形で実行する。シミュレータ向けビルドなので署名は不要。
       - name: Run integration test on iOS simulator
