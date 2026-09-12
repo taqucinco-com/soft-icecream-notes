@@ -33,6 +33,52 @@ jobs:
               -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|$GOOGLE_MAP_KEY_IOS|" \
               mobile/.env.sample > mobile/.env.local
 
+      # ランナーイメージの更新でXcode/ランタイムのバージョンは変わるため、固定値ではなく
+      # 利用可能なものから選ぶ。デバイスは"iPhone 16"があればそれを、無ければ任意のiPhoneを使う。
+      #
+      # 新規作成デバイスの初回起動はData Migrationに3〜4分かかるが、`simctl boot`自体は
+      # 即座に返る。ここでは起動を開始するだけにして、待ち合わせ(bootstatus)はアプリを
+      # インストールする直前に行い、起動時間をFlutterセットアップ〜ビルドの裏に隠す。
+      - name: Create and boot iOS Simulator
+        run: |
+          RUNTIME_JSON=$(xcrun simctl list runtimes --json \
+            | jq -c '[.runtimes[] | select(.isAvailable and (.identifier | contains("iOS")))]
+                     | sort_by(.version | split(".") | map(tonumber)) | last')
+          DEVICE_JSON=$(xcrun simctl list devicetypes --json \
+            | jq -c '[.devicetypes[] | select(.productFamily == "iPhone")]
+                     | (map(select(.name == "iPhone 16")) + .) | first')
+
+          RUNTIME=$(jq -r '.identifier' <<< "$RUNTIME_JSON")
+          RUNTIME_NAME=$(jq -r '.name' <<< "$RUNTIME_JSON")
+          DEVICE_TYPE=$(jq -r '.identifier' <<< "$DEVICE_JSON")
+          DEVICE_NAME=$(jq -r '.name' <<< "$DEVICE_JSON")
+
+          UDID=$(xcrun simctl create "$SIMULATOR_NAME" "$DEVICE_TYPE" "$RUNTIME")
+          echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+
+          # `xcodebuild -version`はXcodeを起動するため、ランナーでの初回呼び出しに20秒以上
+          # かかる。バージョンを知るだけならplistを読めば足りる。
+          XCODE_VERSION=$(defaults read "$(xcode-select -p)/../version.plist" CFBundleShortVersionString)
+
+          echo "--- 選択したシミュレータ ---"
+          echo "OS      : $RUNTIME_NAME ($RUNTIME)"
+          echo "デバイス: $DEVICE_NAME ($DEVICE_TYPE)"
+          echo "Xcode   : $XCODE_VERSION"
+          echo "UDID    : $UDID"
+
+          {
+            echo "### 実行環境"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "| --- | --- |"
+            echo "| OS | $RUNTIME_NAME |"
+            echo "| デバイス | $DEVICE_NAME |"
+            echo "| Xcode | $XCODE_VERSION |"
+            echo "| Maestro | ${MAESTRO_VERSION} |"
+            echo "| UDID | \`$UDID\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # CocoaPodsのバージョンはGemfile(cocoapods ~> 1.17.0)で固定しているので、
       # ランナーにプリインストールされたpodではなくbundler経由のものを使う。
       - name: Set up Ruby (from .ruby-version)
@@ -97,47 +143,12 @@ jobs:
           flutter build ios --simulator --dart-define-from-file=.env.local
           ls -d build/ios/iphonesimulator/Runner.app
 
-      # ランナーイメージの更新でXcode/ランタイムのバージョンは変わるため、固定値ではなく
-      # 利用可能なものから選ぶ。デバイスは"iPhone 16"があればそれを、無ければ任意のiPhoneを使う。
-      - name: Boot iOS Simulator
-        run: |
-          RUNTIME_JSON=$(xcrun simctl list runtimes --json \
-            | jq -c '[.runtimes[] | select(.isAvailable and (.identifier | contains("iOS")))]
-                     | sort_by(.version | split(".") | map(tonumber)) | last')
-          DEVICE_JSON=$(xcrun simctl list devicetypes --json \
-            | jq -c '[.devicetypes[] | select(.productFamily == "iPhone")]
-                     | (map(select(.name == "iPhone 16")) + .) | first')
-
-          RUNTIME=$(jq -r '.identifier' <<< "$RUNTIME_JSON")
-          RUNTIME_NAME=$(jq -r '.name' <<< "$RUNTIME_JSON")
-          DEVICE_TYPE=$(jq -r '.identifier' <<< "$DEVICE_JSON")
-          DEVICE_NAME=$(jq -r '.name' <<< "$DEVICE_JSON")
-
-          UDID=$(xcrun simctl create "$SIMULATOR_NAME" "$DEVICE_TYPE" "$RUNTIME")
-          echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
-
-          # boot と bootstatus は必ず続けて実行する。分離すると bootstatus が
-          # "Device already booted, nothing to do." で素通りし、起動待ちにならない。
-          xcrun simctl boot "$UDID"
-          xcrun simctl bootstatus "$UDID"
-
-          echo "--- 選択したシミュレータ ---"
-          echo "OS      : $RUNTIME_NAME ($RUNTIME)"
-          echo "デバイス: $DEVICE_NAME ($DEVICE_TYPE)"
-          echo "Xcode   : $(xcodebuild -version | tr '\n' ' ')"
-          echo "UDID    : $UDID"
-
-          {
-            echo "### 実行環境"
-            echo ""
-            echo "| 項目 | 値 |"
-            echo "| --- | --- |"
-            echo "| OS | $RUNTIME_NAME |"
-            echo "| デバイス | $DEVICE_NAME |"
-            echo "| Xcode | $(xcodebuild -version | head -1) |"
-            echo "| Maestro | ${MAESTRO_VERSION} |"
-            echo "| UDID | \`$UDID\` |"
-          } >> "$GITHUB_STEP_SUMMARY"
+      # 先に起動を開始してあるので、ここは残りの起動待ちだけ。
+      # `bootstatus`は、状態がBootedでもData Migrationが終わっていなければきちんと待つ
+      # （"Waiting on Data Migration"を出す）。"Device already booted, nothing to do."を
+      # 返すのは起動が本当に完了した後だけなので、分割しても関門として機能する。
+      - name: Wait for simulator boot
+        run: xcrun simctl bootstatus "$SIMULATOR_UDID"
 
       # フロー先頭のappIdと一致していないとMaestroが起動できないので、ここで突き合わせる。
       - name: Install app on simulator
@@ -164,7 +175,9 @@ jobs:
           unzip -q /tmp/maestro.zip -d "$HOME"
           echo "$HOME/maestro/bin" >> "$GITHUB_PATH"
           java -version
-          "$HOME/maestro/bin/maestro" --version
+          # ここで`maestro --version`を叩くとJVMのコールドスタートで20秒近くかかる。
+          # 次のステップでmaestroを実行するので、動かなければそこで分かる。
+          ls -l "$HOME/maestro/bin/maestro"
 
       # 初回実行時にXCUITestのドライバをシミュレータへ導入するため、時間がかかる。
       - name: Run maestro flow
