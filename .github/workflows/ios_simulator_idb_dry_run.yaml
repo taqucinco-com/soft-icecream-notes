@@ -66,10 +66,12 @@ jobs:
           brew trust --tap facebook/fb || echo "brew trust は未対応（このバージョンでは不要）"
           brew install facebook/fb/idb-companion facebook/fb/idb-cli
           idb_companion --version
-      # 注意: `simctl bootstatus`は、すでにBooted状態のデバイスに対しては
-      # "Device already booted, nothing to do." を返して即座に終了し、何も検証しない。
-      # 起動開始から時間が経っているとここは素通りするので、これを準備完了の保証として
-      # 扱ってはいけない。実際の関門は後段の "Wait until idb can read the UI"。
+      # 先に起動を開始してあるので、ここは残りの起動待ちだけ。
+      # `bootstatus`は、状態がBootedでもData Migrationが終わっていなければきちんと待つ。
+      # "Device already booted, nothing to do." を返すのは起動が本当に完了した後だけなので、
+      # 分割しても関門として機能する。
+      # ただし「起動完了」と「idbが画面を読める」は別で、後者は後段の
+      # "Wait until idb can read the UI" で待つ必要がある。
       - name: Wait for simulator boot
         run: xcrun simctl bootstatus "$SIMULATOR_UDID"
 

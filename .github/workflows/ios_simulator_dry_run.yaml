@@ -108,8 +108,10 @@ jobs:
           UDID=$(xcrun simctl create "$SIMULATOR_NAME" "$DEVICE_TYPE" "$RUNTIME")
           echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
 
-          # boot と bootstatus は必ず続けて実行する。分離すると bootstatus が
-          # "Device already booted, nothing to do." で素通りし、起動待ちにならない。
+          # ここは意図的に boot と bootstatus を続けて実行している。分離して起動を前倒しすると
+          # 起動時間を他ステップの裏に隠せるが、PR #49でそれを行ったときに統合テストが
+          # Xcodeビルド成功後のアプリ起動待ちで停止した（原因は未特定。revertしたら通った）。
+          # 因果は証明できていないものの、再発を避けるため現状維持にしている。
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID"
 
