@@ -1,0 +1,197 @@
+name: iOS simulator maestro dry run
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios-simulator-maestro:
+    # 手元での動作確認がmacOS 26.6 / Xcode 26.6で取れているので、デフォルトXcodeが26.6の
+    # macos-26に揃える。MaestroのiOSドライバはXCUITestを使うため、Xcodeとシミュレータの
+    # 組み合わせが手元と近いほうが切り分けやすい。
+    runs-on: macos-26
+    timeout-minutes: 45
+    environment: develop
+    env:
+      SIMULATOR_NAME: "ci_maestro_test"
+      ARTIFACT_DIR: "maestro-artifacts"
+      # brewのmaestro formulaは`depends_on "openjdk"`のため、ランナーにJava 21が
+      # 入っていてもHomebrewのopenjdkを別途入れようとする。formulaがやっているのは
+      # リリースzipの展開だけなので、zipを直接取得してランナーのJavaで動かす。
+      MAESTRO_VERSION: "2.10.0"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Create mobile/.env.local from .env.sample
+        env:
+          GOOGLE_MAP_KEY_ANDROID: ${{ secrets.GOOGLE_MAP_KEY_ANDROID }}
+          GOOGLE_MAP_KEY_IOS: ${{ secrets.GOOGLE_MAP_KEY_IOS }}
+        run: |
+          sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|$GOOGLE_MAP_KEY_ANDROID|" \
+              -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|$GOOGLE_MAP_KEY_IOS|" \
+              mobile/.env.sample > mobile/.env.local
+
+      # CocoaPodsのバージョンはGemfile(cocoapods ~> 1.17.0)で固定しているので、
+      # ランナーにプリインストールされたpodではなくbundler経由のものを使う。
+      - name: Set up Ruby (from .ruby-version)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version-file: .ruby-version
+          bundler-cache: true
+
+      - name: CocoaPods cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            mobile/ios/Pods
+          key: cocoapods-${{ runner.os }}-${{ hashFiles('mobile/ios/Podfile.lock') }}
+          restore-keys: |
+            cocoapods-${{ runner.os }}-
+
+      - name: Pub cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-cache-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            pub-cache-${{ runner.os }}-
+
+      - name: Set up Flutter (from mobile/.fvmrc)
+        id: flutter_setup
+        uses: kuhnroyal/flutter-fvm-config-action@v3
+        with:
+          path: mobile/.fvmrc
+          setup: "true"
+          cache: "true"
+
+      - name: Dart build_runner cache
+        uses: actions/cache@v4
+        with:
+          path: mobile/.dart_tool
+          key: dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-
+
+      - name: Install Flutter dependencies and generate code
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+
+      # PodfileはFlutter/Generated.xcconfigの存在を要求するため、必ずflutter pub getの後に実行する。
+      - name: Install CocoaPods dependencies
+        working-directory: mobile/ios
+        run: |
+          pod --version
+          bundle exec pod install
+
+      # Maestroはビルドを行わず、インストール済みのアプリをappIdで起動するだけなので、
+      # ここでシミュレータ向けにビルドしておく。--simulatorはビルドモードのデフォルトが
+      # debugになり、署名も不要。
+      - name: Build app for simulator
+        working-directory: mobile
+        run: |
+          flutter build ios --simulator --dart-define-from-file=.env.local
+          ls -d build/ios/iphonesimulator/Runner.app
+
+      # ランナーイメージの更新でXcode/ランタイムのバージョンは変わるため、固定値ではなく
+      # 利用可能なものから選ぶ。デバイスは"iPhone 16"があればそれを、無ければ任意のiPhoneを使う。
+      - name: Boot iOS Simulator
+        run: |
+          RUNTIME_JSON=$(xcrun simctl list runtimes --json \
+            | jq -c '[.runtimes[] | select(.isAvailable and (.identifier | contains("iOS")))]
+                     | sort_by(.version | split(".") | map(tonumber)) | last')
+          DEVICE_JSON=$(xcrun simctl list devicetypes --json \
+            | jq -c '[.devicetypes[] | select(.productFamily == "iPhone")]
+                     | (map(select(.name == "iPhone 16")) + .) | first')
+
+          RUNTIME=$(jq -r '.identifier' <<< "$RUNTIME_JSON")
+          RUNTIME_NAME=$(jq -r '.name' <<< "$RUNTIME_JSON")
+          DEVICE_TYPE=$(jq -r '.identifier' <<< "$DEVICE_JSON")
+          DEVICE_NAME=$(jq -r '.name' <<< "$DEVICE_JSON")
+
+          UDID=$(xcrun simctl create "$SIMULATOR_NAME" "$DEVICE_TYPE" "$RUNTIME")
+          echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+
+          # boot と bootstatus は必ず続けて実行する。分離すると bootstatus が
+          # "Device already booted, nothing to do." で素通りし、起動待ちにならない。
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID"
+
+          echo "--- 選択したシミュレータ ---"
+          echo "OS      : $RUNTIME_NAME ($RUNTIME)"
+          echo "デバイス: $DEVICE_NAME ($DEVICE_TYPE)"
+          echo "Xcode   : $(xcodebuild -version | tr '\n' ' ')"
+          echo "UDID    : $UDID"
+
+          {
+            echo "### 実行環境"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "| --- | --- |"
+            echo "| OS | $RUNTIME_NAME |"
+            echo "| デバイス | $DEVICE_NAME |"
+            echo "| Xcode | $(xcodebuild -version | head -1) |"
+            echo "| Maestro | ${MAESTRO_VERSION} |"
+            echo "| UDID | \`$UDID\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # フロー先頭のappIdと一致していないとMaestroが起動できないので、ここで突き合わせる。
+      - name: Install app on simulator
+        working-directory: mobile
+        run: |
+          APP=build/ios/iphonesimulator/Runner.app
+          xcrun simctl install "$SIMULATOR_UDID" "$APP"
+
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")
+          FLOW_APP_ID=$(sed -n 's/^appId: *//p' test/e2e/maestro/page_transfar.yaml | head -1)
+          echo "インストールしたbundle id: $BUNDLE_ID"
+          echo "フローのappId            : $FLOW_APP_ID"
+          if [ "$BUNDLE_ID" != "$FLOW_APP_ID" ]; then
+            echo "bundle idとappIdが一致しない" >&2
+            exit 1
+          fi
+
+      # brew経由だとopenjdkの導入が走るため、リリースzipを直接展開する。
+      # ランナーにはJava 21(JAVA_HOME_21_arm64)が入っており、Maestroの要件(17+)を満たす。
+      - name: Install Maestro
+        run: |
+          curl -fsSL -o /tmp/maestro.zip \
+            "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          unzip -q /tmp/maestro.zip -d "$HOME"
+          echo "$HOME/maestro/bin" >> "$GITHUB_PATH"
+          java -version
+          "$HOME/maestro/bin/maestro" --version
+
+      # 初回実行時にXCUITestのドライバをシミュレータへ導入するため、時間がかかる。
+      - name: Run maestro flow
+        run: |
+          mkdir -p "$ARTIFACT_DIR"
+          maestro test mobile/test/e2e/maestro/page_transfar.yaml \
+            --udid "$SIMULATOR_UDID" \
+            --debug-output "$ARTIFACT_DIR/debug" \
+            --flatten-debug-output \
+            --format JUNIT \
+            --output "$ARTIFACT_DIR/report.xml"
+
+      - name: Capture screenshot
+        if: always() && env.SIMULATOR_UDID != ''
+        run: |
+          mkdir -p "$ARTIFACT_DIR"
+          xcrun simctl io "$SIMULATOR_UDID" screenshot "$ARTIFACT_DIR/screencap.png"
+
+      - name: Upload maestro artifacts
+        if: always() && env.SIMULATOR_UDID != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-dry-run
+          path: ${{ env.ARTIFACT_DIR }}
+
+      - name: Dump simulator info on failure
+        if: failure()
+        run: |
+          xcrun simctl list devices || true
+          xcrun simctl spawn "$SIMULATOR_UDID" log show --last 2m --style compact || true
