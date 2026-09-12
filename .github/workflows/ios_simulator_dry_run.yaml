@@ -90,20 +90,46 @@ jobs:
       - name: Boot iOS Simulator
         run: |
           xcrun simctl list runtimes
-          RUNTIME=$(xcrun simctl list runtimes --json \
-            | jq -r '[.runtimes[] | select(.isAvailable and (.identifier | contains("iOS")))]
-                     | sort_by(.version | split(".") | map(tonumber)) | last | .identifier')
-          DEVICE_TYPE=$(xcrun simctl list devicetypes --json \
-            | jq -r '[.devicetypes[] | select(.productFamily == "iPhone")]
-                     | (map(select(.name == "iPhone 16")) + .) | first | .identifier')
-          echo "runtime=$RUNTIME"
-          echo "device_type=$DEVICE_TYPE"
+
+          # 識別子だけでなく表示名(例: "iOS 26.2" / "iPhone 16")も使うので、
+          # 該当オブジェクトごと取り出す。
+          RUNTIME_JSON=$(xcrun simctl list runtimes --json \
+            | jq -c '[.runtimes[] | select(.isAvailable and (.identifier | contains("iOS")))]
+                     | sort_by(.version | split(".") | map(tonumber)) | last')
+          DEVICE_JSON=$(xcrun simctl list devicetypes --json \
+            | jq -c '[.devicetypes[] | select(.productFamily == "iPhone")]
+                     | (map(select(.name == "iPhone 16")) + .) | first')
+
+          RUNTIME=$(jq -r '.identifier' <<< "$RUNTIME_JSON")
+          RUNTIME_NAME=$(jq -r '.name' <<< "$RUNTIME_JSON")
+          DEVICE_TYPE=$(jq -r '.identifier' <<< "$DEVICE_JSON")
+          DEVICE_NAME=$(jq -r '.name' <<< "$DEVICE_JSON")
 
           UDID=$(xcrun simctl create "$SIMULATOR_NAME" "$DEVICE_TYPE" "$RUNTIME")
           echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
 
+          # boot と bootstatus は必ず続けて実行する。分離すると bootstatus が
+          # "Device already booted, nothing to do." で素通りし、起動待ちにならない。
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID"
+
+          # 動的選択なので、どのOS/デバイスで実行したのかをログと実行サマリの両方に残す。
+          echo "--- 選択したシミュレータ ---"
+          echo "OS      : $RUNTIME_NAME ($RUNTIME)"
+          echo "デバイス: $DEVICE_NAME ($DEVICE_TYPE)"
+          echo "Xcode   : $(xcodebuild -version | tr '\n' ' ')"
+          echo "UDID    : $UDID"
+
+          {
+            echo "### 実行環境"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "| --- | --- |"
+            echo "| OS | $RUNTIME_NAME |"
+            echo "| デバイス | $DEVICE_NAME |"
+            echo "| Xcode | $(xcodebuild -version | head -1) |"
+            echo "| UDID | \`$UDID\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Flutter devices
         working-directory: mobile
