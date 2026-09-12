@@ -100,3 +100,21 @@ maestroは自分でデバイスを探すので、**シミュレータが起動�
 `--udid`に渡すのはその起動済みシミュレータのUDID。
 
 https://github.com/user-attachments/assets/158512b7-e83d-43e3-a109-ac28ab2ea8d0
+
+# AWS
+
+## secret登録
+
+```sh
+aws secretsmanager create-secret \   
+    --name "taqucinco-com/soft-icecream-notes/secrets" \   
+    --description "taqucinco-com/soft-icecream-notesのsecret" \
+    --secret-string '{"username":"admin","password":"Password123!"}'
+```
+
+## secret取得
+
+```sh
+aws secretsmanager get-secret-value \
+    --secret-id "taqucinco-com/soft-icecream-notes/secrets"
+```
