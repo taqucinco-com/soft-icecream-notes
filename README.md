@@ -67,3 +67,5 @@ maestro studio
 # maestro cli
 maestro test ./mobile/test/e2e/maestro/page_transfar.yaml --udid={UDID}
 ```
+
+https://github.com/user-attachments/assets/158512b7-e83d-43e3-a109-ac28ab2ea8d0
