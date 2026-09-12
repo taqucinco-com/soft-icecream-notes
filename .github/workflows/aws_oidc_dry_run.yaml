@@ -28,3 +28,18 @@ jobs:
             --secret-id "taqucinco-com/soft-icecream-notes/example" \
             --query "SecretString" \
             --output text
+
+      - name: Get parameter value
+        id: get-parameter
+        run: |
+          PARAM_VALUE=$(aws ssm get-parameter \
+            --name "/taqucinco-com/soft-icecream-notes/example" \
+            --with-decryption \
+            --query "Parameter.Value" \
+            --output text)
+          echo "PARAM_VALUE=$PARAM_VALUE" >> "$GITHUB_OUTPUT"
+
+      - name: Use parameter value
+        env:
+          PARAM_VALUE: ${{ steps.get-parameter.outputs.PARAM_VALUE }}
+        run: echo "value is $PARAM_VALUE"

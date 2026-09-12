@@ -118,3 +118,17 @@ aws secretsmanager create-secret \
 aws secretsmanager get-secret-value \
     --secret-id "taqucinco-com/soft-icecream-notes/secrets"
 ```
+
+## AWS OIDCの設定確認
+
+GitHub Actionsからのディスパッチの履歴をAdministrator Accessで確認できる。
+
+```
+aws cloudtrail lookup-events \
+  --profile Administrator \
+  --lookup-attributes AttributeKey=EventName,AttributeValue=AssumeRoleWithWebIdentity \
+  --start-time "2026-09-12T11:44:00Z" \
+  --end-time "2026-09-12T11:49:00Z" \
+  --region ap-northeast-1
+
+```
