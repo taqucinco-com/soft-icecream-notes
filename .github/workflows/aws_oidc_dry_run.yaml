@@ -12,6 +12,7 @@ permissions:
 jobs:
   aws-oidc:
     runs-on: ubuntu-latest
+    environment: develop
 
     steps:
       - name: Checkout code
