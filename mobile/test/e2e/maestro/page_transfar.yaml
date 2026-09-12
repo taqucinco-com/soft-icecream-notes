@@ -1,0 +1,10 @@
+appId: com.taqucinco.softicecreamnotes.icecreamLog
+---
+# 初期状態にする
+- clearState
+# アプリ起動
+- launchApp
+- tapOn: "設定"
+- assertVisible: "ニックネーム"
+- waitForAnimationToEnd
+- assertVisible: "アイコンを変更"
