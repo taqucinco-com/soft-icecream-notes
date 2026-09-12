@@ -187,7 +187,7 @@ jobs:
         if: always() && env.SIMULATOR_UDID != ''
         uses: actions/upload-artifact@v4
         with:
-          name: maestro-dry-run
+          name: ios-maestro-test
           path: ${{ env.ARTIFACT_DIR }}
 
       - name: Dump simulator info on failure
