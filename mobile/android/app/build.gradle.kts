@@ -18,10 +18,7 @@ val dartDefines: Map<String, String> = (project.findProperty("dart-defines") as 
     }
     ?: emptyMap()
 
-// GITHUB_ACTIONS環境変数での判定は、Claude Code actionのBashサンドボックス経由で
-// flutter buildを実行した場合に環境変数が伝播せずif文がfalseになり、AGPが実行のたびに
-// 異なるデバッグ鍵を自動生成してGoogle Maps APIキーの認可が通らなくなる不具合の原因だった。
-// ファイルの存在だけで判定する。
+// CIデバッグ用のkeystoreを利用する、実体はSSM Parameter StoreにBASE64で登録している
 val ciDebugKeystore = rootProject.file("ci-debug.keystore")
 
 android {
