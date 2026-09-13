@@ -26,10 +26,9 @@ agentは以下の形式で応答する。
 
 以下の情報を集める。
 
-- `target_type`: PRコメント/PRレビュー由来なら`pr`、Issueコメント由来なら`issue`
-- `target_number`: 対象のPR番号またはIssue番号。既に把握しているイベント情報（今回のトリガーとなったPR/Issue）からそのまま使う
+- `target_type`/`target_number`: 最初のプロンプトに「対象種別: pr/issue」「対象番号: ...」として直接渡されているので、それをそのまま使う（推測やコマンドでの再取得は不要）
 - `head_ref`: 検証対象のブランチ名。**PRコメント/PRレビュー由来の依頼の場合、`claude.yml`の`actions/checkout`は既定でベースブランチをチェックアウトしており、`git branch --show-current`はPRのhead refと一致しないことがある。** 必ず`gh pr view <PR番号> --json headRefName -q .headRefName`で取得すること（`--allowedTools`に`Bash(gh pr view:*)`として許可済みの単独コマンド）。Issueコメント由来で、Claude自身がこの turn で新規ブランチを作成・pushした場合は、そのブランチ名（`git branch --show-current`の結果）をそのまま使ってよい
-- `original_request`: 依頼元のコメント本文（受け取った依頼テキストそのもの）
+- `original_request`: 依頼元のコメント本文。最初のプロンプトの「起動元コメント本文:」以下にそのまま渡されているので、それを使う
 - `judged_reason`: `ios-verify-judge`agentが返した理由をそのまま使う
 - `source_comment_url`: 起動元となった依頼コメント（またはIssue）のパーマリンク。この値は最初のプロンプト冒頭に「起動元コメントURL: ...」として直接渡されているので、それをそのまま使う。**`echo`/`printenv`/`env`等のBashコマンドで改めて取得しようとしないこと。** シェル変数展開（`$VAR`）を含むコマンドは、`Bash(echo:*)`等でコマンド自体が許可されていても「Contains simple_expansion」として承認待ちになり、非対話的なCI実行では失敗する（実際にIssue #68で発生した事故）。プロンプトに書かれている値を読んで使うだけでよい
 
@@ -52,7 +51,7 @@ gh workflow run claude-ios.yaml --ref develop -f target_type='pr' -f target_numb
 
 ## 4. 起動結果を最終応答に含める
 
-**`gh pr comment`/`gh issue comment`を別途実行する必要は無い。** `claude.yml`はイベント（PR/Issueコメント等）にひも付いて起動しており、この turn の最終応答テキストはGitHub Actions側が自動的にPR/Issueコメントとして投稿する。`gh pr comment`等は`--allowedTools`に含まれておらず、実行しようとすると3.と同じ理由で承認待ちのまま失敗するので使わないこと。
+このskill自体は`gh pr comment`/`gh issue comment`を実行しない。最初のプロンプトで指示されている通り、このturnの最後に一度だけ`gh pr comment`/`gh issue comment`で起動元コメントへの返信を投稿することになっており（引用行`> 起動元コメントへの返信: <URL>`込み）、以下の内容はその返信本文の一部として含めればよい。
 
 ### 成功時
 
