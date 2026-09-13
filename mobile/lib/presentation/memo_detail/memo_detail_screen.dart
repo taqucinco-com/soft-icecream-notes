@@ -74,11 +74,13 @@ class _DetailContent extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               const SizedBox(height: 8),
-              Row(
+              Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   if (memo.eatenDate != null) Text(formatYmd(memo.eatenDate!)),
-                  if (memo.servingMachine != null) ...[
-                    const SizedBox(width: 8),
+                  for (final servingMachine in memo.servingMachines)
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -89,11 +91,10 @@ class _DetailContent extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        memo.servingMachine!,
+                        servingMachine,
                         style: Theme.of(context).textTheme.labelSmall,
                       ),
                     ),
-                  ],
                 ],
               ),
               const SizedBox(height: 24),

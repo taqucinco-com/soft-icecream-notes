@@ -49,9 +49,16 @@ class MemoCard extends StatelessWidget {
                         : '日付未設定',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
-                  if (memo.servingMachine != null) ...[
+                  if (memo.servingMachines.isNotEmpty) ...[
                     const SizedBox(height: 6),
-                    _ServingMachineTag(label: memo.servingMachine!),
+                    Wrap(
+                      spacing: 4,
+                      runSpacing: 4,
+                      children: [
+                        for (final servingMachine in memo.servingMachines)
+                          _ServingMachineTag(label: servingMachine),
+                      ],
+                    ),
                   ],
                 ],
               ),

@@ -45,7 +45,7 @@ class MockMemoRepository implements MemoRepository {
       );
     if (servingMachineFilter == null) return sorted;
     return sorted
-        .where((memo) => memo.servingMachine == servingMachineFilter)
+        .where((memo) => memo.servingMachines.contains(servingMachineFilter))
         .toList();
   }
 
@@ -56,7 +56,7 @@ class MockMemoRepository implements MemoRepository {
       latitude: 35.6586,
       longitude: 139.7454,
       storeName: 'ジェラテリア　テオブロマ',
-      servingMachine: ServingMachine.calpigiani,
+      servingMachines: const [ServingMachine.calpigiani, ServingMachine.nissei],
       impressions: const ['ミルク感が強く後味がすっきり', 'バニラの香りが上品', 'テクスチャがなめらか'],
       tasteRating: const TasteRating(
         mouthfeel: 4,
@@ -72,7 +72,7 @@ class MockMemoRepository implements MemoRepository {
       latitude: 35.6702,
       longitude: 139.7016,
       storeName: 'ソフトクリーム専門店 雪',
-      servingMachine: ServingMachine.nissei,
+      servingMachines: const [ServingMachine.nissei],
       impressions: const ['きめ細かい口当たり'],
       tasteRating: const TasteRating(
         mouthfeel: 5,
@@ -88,13 +88,13 @@ class MockMemoRepository implements MemoRepository {
       latitude: 35.6280,
       longitude: 139.7387,
       storeName: '牧場カフェ　のどか',
-      servingMachine: ServingMachine.other,
+      servingMachines: const [ServingMachine.other],
     ),
     Memo(
       id: '4',
       eatenDate: DateTime(2026, 7, 12),
       storeName: '店名未設定（位置情報なし）',
-      servingMachine: ServingMachine.calpigiani,
+      servingMachines: const [ServingMachine.calpigiani],
     ),
     Memo(
       id: '5',
@@ -102,7 +102,7 @@ class MockMemoRepository implements MemoRepository {
       latitude: 35.7100,
       longitude: 139.8107,
       storeName: 'ミルクスタンド　白樺',
-      servingMachine: ServingMachine.nissei,
+      servingMachines: const [ServingMachine.nissei],
     ),
   ];
 }

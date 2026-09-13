@@ -101,7 +101,8 @@ class _PreviewCard extends StatelessWidget {
                     Text(
                       [
                         if (memo.eatenDate != null) formatYmd(memo.eatenDate!),
-                        if (memo.servingMachine != null) memo.servingMachine!,
+                        if (memo.servingMachines.isNotEmpty)
+                          memo.servingMachines.join('、'),
                       ].join(' ・ '),
                       style: Theme.of(context).textTheme.bodySmall,
                     ),

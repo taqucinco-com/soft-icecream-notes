@@ -65,8 +65,9 @@ class MemoEditScreen extends ConsumerWidget {
           const StoreCandidatePicker(),
           const SizedBox(height: 24),
           _ServingMachinePicker(
-            selected: state.servingMachine,
-            onSelected: notifier.setServingMachine,
+            selected: state.servingMachines,
+            onToggle: notifier.toggleServingMachine,
+            onCustomChanged: notifier.setCustomServingMachine,
           ),
           const SizedBox(height: 24),
           const ImpressionListEditor(),
@@ -106,11 +107,13 @@ class _PhotoPicker extends StatelessWidget {
 class _ServingMachinePicker extends StatefulWidget {
   const _ServingMachinePicker({
     required this.selected,
-    required this.onSelected,
+    required this.onToggle,
+    required this.onCustomChanged,
   });
 
-  final String? selected;
-  final ValueChanged<String> onSelected;
+  final List<String> selected;
+  final ValueChanged<String> onToggle;
+  final ValueChanged<String> onCustomChanged;
 
   @override
   State<_ServingMachinePicker> createState() => _ServingMachinePickerState();
@@ -118,15 +121,18 @@ class _ServingMachinePicker extends StatefulWidget {
 
 class _ServingMachinePickerState extends State<_ServingMachinePicker> {
   late final TextEditingController _controller;
+  bool _customFieldVisible = false;
 
-  bool get _isCustom =>
-      widget.selected != null &&
-      !ServingMachine.presetValues.contains(widget.selected);
+  String get _customValue => widget.selected.firstWhere(
+    (machine) => !ServingMachine.presetValues.contains(machine),
+    orElse: () => '',
+  );
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.selected);
+    _customFieldVisible = _customValue.isNotEmpty;
+    _controller = TextEditingController(text: _customValue);
   }
 
   @override
@@ -137,39 +143,45 @@ class _ServingMachinePickerState extends State<_ServingMachinePicker> {
 
   @override
   Widget build(BuildContext context) {
-    final selected = widget.selected ?? '';
-    // ユーザーの入力によるものではなく、外部要因（プリセット選択やチップタップ等）で
+    final customValue = _customValue;
+    final isCustomActive = _customFieldVisible || customValue.isNotEmpty;
+    // ユーザーの入力によるものではなく、外部要因（保存後のリセット等）で
     // 値が変わった場合のみコントローラを同期する。
-    if (_isCustom && _controller.text != selected) {
+    if (_controller.text != customValue) {
       _controller.value = TextEditingValue(
-        text: selected,
-        selection: TextSelection.collapsed(offset: selected.length),
+        text: customValue,
+        selection: TextSelection.collapsed(offset: customValue.length),
       );
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('サービングマシン', style: TextStyle(fontSize: 13)),
+        const Text('サービングマシン（複数選択可）', style: TextStyle(fontSize: 13)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             for (final machine in ServingMachine.presetValues)
-              ChoiceChip(
+              FilterChip(
                 label: Text(machine),
-                selected: widget.selected == machine,
-                onSelected: (_) => widget.onSelected(machine),
+                selected: widget.selected.contains(machine),
+                onSelected: (_) => widget.onToggle(machine),
               ),
-            ChoiceChip(
+            FilterChip(
               label: const Text('その他（自由入力）'),
-              selected: _isCustom,
-              onSelected: (_) => widget.onSelected(''),
+              selected: isCustomActive,
+              onSelected: (selected) {
+                setState(() => _customFieldVisible = selected);
+                if (!selected) {
+                  widget.onCustomChanged('');
+                }
+              },
             ),
           ],
         ),
-        if (_isCustom) ...[
+        if (isCustomActive) ...[
           const SizedBox(height: 8),
           TextField(
             controller: _controller,
@@ -178,7 +190,7 @@ class _ServingMachinePickerState extends State<_ServingMachinePicker> {
               border: OutlineInputBorder(),
               hintText: 'サービングマシン名を入力',
             ),
-            onChanged: widget.onSelected,
+            onChanged: widget.onCustomChanged,
           ),
         ],
       ],

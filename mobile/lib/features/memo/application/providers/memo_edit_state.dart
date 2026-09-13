@@ -11,7 +11,7 @@ class MemoEditState {
     this.storeName,
     this.storePlaceId,
     this.isManualStoreEntry = false,
-    this.servingMachine,
+    this.servingMachines = const [],
     this.impressions = const [],
     this.tasteRating,
     this.isSaving = false,
@@ -26,7 +26,7 @@ class MemoEditState {
   final String? storeName;
   final String? storePlaceId;
   final bool isManualStoreEntry;
-  final String? servingMachine;
+  final List<String> servingMachines;
   final List<String> impressions;
   final TasteRating? tasteRating;
   final bool isSaving;
@@ -41,7 +41,7 @@ class MemoEditState {
     String? storeName,
     String? storePlaceId,
     bool? isManualStoreEntry,
-    String? servingMachine,
+    List<String>? servingMachines,
     List<String>? impressions,
     TasteRating? tasteRating,
     bool? isSaving,
@@ -56,7 +56,7 @@ class MemoEditState {
       storeName: storeName ?? this.storeName,
       storePlaceId: storePlaceId ?? this.storePlaceId,
       isManualStoreEntry: isManualStoreEntry ?? this.isManualStoreEntry,
-      servingMachine: servingMachine ?? this.servingMachine,
+      servingMachines: servingMachines ?? this.servingMachines,
       impressions: impressions ?? this.impressions,
       tasteRating: tasteRating ?? this.tasteRating,
       isSaving: isSaving ?? this.isSaving,

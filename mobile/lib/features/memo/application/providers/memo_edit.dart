@@ -5,6 +5,7 @@ import 'package:icecream_log/features/memo/application/di/usecase_providers.dart
 import 'package:icecream_log/features/memo/application/providers/memo_edit_state.dart';
 import 'package:icecream_log/features/memo/domain/entities/memo.dart';
 import 'package:icecream_log/features/memo/domain/entities/nearby_store_candidate.dart';
+import 'package:icecream_log/features/memo/domain/entities/serving_machine.dart';
 import 'package:icecream_log/features/memo/domain/entities/taste_rating.dart';
 
 part 'generated/memo_edit.g.dart';
@@ -39,7 +40,7 @@ class MemoEdit extends _$MemoEdit {
       storeName: state.storeName,
       storePlaceId: state.storePlaceId,
       isManualStoreEntry: state.isManualStoreEntry,
-      servingMachine: state.servingMachine,
+      servingMachines: state.servingMachines,
       impressions: state.impressions,
       tasteRating: state.tasteRating,
       isSaving: state.isSaving,
@@ -68,7 +69,7 @@ class MemoEdit extends _$MemoEdit {
       storeCandidates: state.storeCandidates,
       storeName: '',
       isManualStoreEntry: true,
-      servingMachine: state.servingMachine,
+      servingMachines: state.servingMachines,
       impressions: state.impressions,
       tasteRating: state.tasteRating,
     );
@@ -78,8 +79,26 @@ class MemoEdit extends _$MemoEdit {
     state = state.copyWith(storeName: value);
   }
 
-  void setServingMachine(String value) {
-    state = state.copyWith(servingMachine: value);
+  void toggleServingMachine(String value) {
+    final current = state.servingMachines;
+    final updated = current.contains(value)
+        ? current.where((machine) => machine != value).toList()
+        : [...current, value];
+    state = state.copyWith(servingMachines: updated);
+  }
+
+  /// 「その他（自由入力）」チップで入力されたテキストを、プリセット値はそのままに
+  /// カスタム分だけ差し替える。空文字ならカスタム分を取り除く。
+  void setCustomServingMachine(String value) {
+    final presetsOnly = state.servingMachines
+        .where(ServingMachine.presetValues.contains)
+        .toList();
+    final trimmed = value.trim();
+    state = state.copyWith(
+      servingMachines: trimmed.isEmpty
+          ? presetsOnly
+          : [...presetsOnly, trimmed],
+    );
   }
 
   void addImpression(String text) {
@@ -106,7 +125,7 @@ class MemoEdit extends _$MemoEdit {
       longitude: state.longitude,
       storeName: _normalizeToNull(state.storeName),
       storePlaceId: state.storePlaceId,
-      servingMachine: _normalizeToNull(state.servingMachine),
+      servingMachines: _normalizeServingMachines(state.servingMachines),
       impressions: state.impressions,
       tasteRating: state.tasteRating,
     );
@@ -119,5 +138,13 @@ class MemoEdit extends _$MemoEdit {
   String? _normalizeToNull(String? value) {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// カスタム自由入力の空要素・重複を取り除く。
+  List<String> _normalizeServingMachines(List<String> values) {
+    final trimmed = values.map((value) => value.trim()).where(
+      (value) => value.isNotEmpty,
+    );
+    return trimmed.toSet().toList();
   }
 }

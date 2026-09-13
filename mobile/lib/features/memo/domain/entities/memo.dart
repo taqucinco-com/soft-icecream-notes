@@ -9,7 +9,7 @@ class Memo {
     this.longitude,
     this.storeName,
     this.storePlaceId,
-    this.servingMachine,
+    this.servingMachines = const [],
     this.impressions = const [],
     this.tasteRating,
   });
@@ -21,7 +21,7 @@ class Memo {
   final double? longitude;
   final String? storeName;
   final String? storePlaceId;
-  final String? servingMachine;
+  final List<String> servingMachines;
   final List<String> impressions;
   final TasteRating? tasteRating;
 
@@ -34,7 +34,7 @@ class Memo {
     double? longitude,
     String? storeName,
     String? storePlaceId,
-    String? servingMachine,
+    List<String>? servingMachines,
     List<String>? impressions,
     TasteRating? tasteRating,
   }) {
@@ -46,7 +46,7 @@ class Memo {
       longitude: longitude ?? this.longitude,
       storeName: storeName ?? this.storeName,
       storePlaceId: storePlaceId ?? this.storePlaceId,
-      servingMachine: servingMachine ?? this.servingMachine,
+      servingMachines: servingMachines ?? this.servingMachines,
       impressions: impressions ?? this.impressions,
       tasteRating: tasteRating ?? this.tasteRating,
     );
