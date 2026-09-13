@@ -126,5 +126,5 @@ jobs:
             Bash(gh issue comment:*),
             Bash(gh pr create:*),
             Bash(gh pr merge:*),
-            Bash(gh api repos/${{ github.repository }}/commits/:*),
-            Bash(gh api repos/${{ github.repository }}/branches/:*)"
+            Bash(gh pr list:*),
+            Bash(gh pr checks:*)"
