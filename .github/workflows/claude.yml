@@ -49,19 +49,20 @@ jobs:
           esac
 
       - name: Determine source comment URL
+        id: source_comment
         run: |
           case "${{ github.event_name }}" in
             issue_comment)
-              echo "SOURCE_COMMENT_URL=${{ github.event.comment.html_url }}" >> "$GITHUB_ENV"
+              echo "url=${{ github.event.comment.html_url }}" >> "$GITHUB_OUTPUT"
               ;;
             pull_request_review_comment)
-              echo "SOURCE_COMMENT_URL=${{ github.event.comment.html_url }}" >> "$GITHUB_ENV"
+              echo "url=${{ github.event.comment.html_url }}" >> "$GITHUB_OUTPUT"
               ;;
             pull_request_review)
-              echo "SOURCE_COMMENT_URL=${{ github.event.review.html_url }}" >> "$GITHUB_ENV"
+              echo "url=${{ github.event.review.html_url }}" >> "$GITHUB_OUTPUT"
               ;;
             issues)
-              echo "SOURCE_COMMENT_URL=${{ github.event.issue.html_url }}" >> "$GITHUB_ENV"
+              echo "url=${{ github.event.issue.html_url }}" >> "$GITHUB_OUTPUT"
               ;;
           esac
 
@@ -103,8 +104,10 @@ jobs:
 
           show_full_output: true
 
-          # Optional: Give a custom prompt to Claude. If this is not specified, Claude will perform the instructions specified in the comment that tagged it.
-          # prompt: 'Update the pull request description to include a summary of changes.'
+          prompt: |
+            起動元コメントURL: ${{ steps.source_comment.outputs.url }}
+
+            （このURLはandroid-verify-dispatch/ios-verify-dispatchスキルでclaude-android.yaml/claude-ios.yamlを起動する際にsource_comment_urlとしてそのまま使ってください。環境変数の展開やコマンドでの再取得は不要です。）
 
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
