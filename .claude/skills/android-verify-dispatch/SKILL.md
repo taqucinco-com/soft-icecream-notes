@@ -9,7 +9,7 @@ description: GitHub Actionsの`@claude`実行(`.github/workflows/claude.yml`)で
 
 ## 1. `android-verify-judge`agentを呼び出す
 
-`Task`ツールで`subagent_type: android-verify-judge`を指定し、依頼元のコメント本文をそのまま渡す。必要であれば、対象のPR/Issueで何が変更されたかの要約も添えてよい。
+`Task`ツールで`subagent_type: android-verify-judge`を**同期的に（`run_in_background: false`を指定して）**呼び出し、依頼元のコメント本文をそのまま渡す。必要であれば、対象のPR/Issueで何が変更されたかの要約も添えてよい。**バックグラウンド（非同期）呼び出しは使わないこと。** GitHub Actionsの非対話的なCIセッションには後続ターンが無く、非同期呼び出しの完了通知を受け取れないため、判定結果を使えないままターンが終わってしまう。
 
 agentは以下の形式で応答する。
 
