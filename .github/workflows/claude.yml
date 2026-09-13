@@ -127,4 +127,5 @@ jobs:
             Bash(gh pr create:*),
             Bash(gh pr merge:*),
             Bash(gh pr list:*),
-            Bash(gh pr checks:*)"
+            Bash(gh pr checks:*),
+            Bash(gh api repos/${{ github.repository }}/branches/*/protection:*)"
