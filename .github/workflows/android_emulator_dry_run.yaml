@@ -57,6 +57,9 @@ jobs:
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
           key: avd-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_AVD_TARGET }}
 
+      - name: Remove stale emulator lock files from cached AVD
+        run: find ~/.android/avd -name "*.lock" -print -exec rm -rf {} +
+
       - name: Decode Debug Keystore
         run: echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > mobile/android/ci-debug.keystore
 
@@ -125,3 +128,12 @@ jobs:
       - name: Dump emulator log on failure
         if: failure()
         run: cat /tmp/emulator.log || true
+
+      - name: Stop Android emulator
+        if: always()
+        run: |
+          adb -s emulator-5554 emu kill || true
+          for _ in $(seq 1 30); do
+            adb devices 2>/dev/null | grep -q emulator-5554 || break
+            sleep 1
+          done
