@@ -113,6 +113,10 @@ jobs:
             /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
           key: avd-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_AVD_TARGET }}
 
+      - name: Remove stale emulator lock files from cached AVD
+        if: steps.ui_verify.outputs.enabled == 'true'
+        run: find ~/.android/avd -name "*.lock" -print -exec rm -rf {} +
+
       - name: Decode Debug Keystore
         if: steps.ui_verify.outputs.enabled == 'true'
         run: echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > mobile/android/ci-debug.keystore
@@ -211,3 +215,12 @@ jobs:
               gh pr comment "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
               ;;
           esac
+
+      - name: Stop Android emulator
+        if: always() && steps.ui_verify.outputs.enabled == 'true'
+        run: |
+          "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 emu kill || true
+          for _ in $(seq 1 30); do
+            "$ANDROID_HOME/platform-tools/adb" devices 2>/dev/null | grep -q emulator-5554 || break
+            sleep 1
+          done
