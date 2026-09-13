@@ -47,24 +47,24 @@
 
 ## presentation層（メモ作成・編集）
 
-- [ ] T14: `MemoEditScreen`を実装し、T2で用意したモーダルルートに接続する。写真取り込み→Exif抽出結果表示→日付欄が空欄の場合の手動入力に対応する。（REQ-1, REQ-8）— 依存: T2, T12
+- [ ] T14: `MemoEditScreen`を実装し、T2で用意したモーダルルートに接続する。写真取り込み→Exif抽出結果表示→日付欄が空欄の場合の手動入力に対応する。（REQ-1, REQ-8, Figma: 03_メモ作成編集 node-id 2:4）— 依存: T2, T12
   - 検証: `ProviderScope(overrides: [...])`で`image_picker`/`memoEditProvider`をフェイクに差し替え、Exifありの場合は日付が自動表示され、Exifなしの場合は手動入力欄が表示されることをWidgetテストで確認する。
-- [ ] T15: `StoreCandidatePicker`を実装し`MemoEditScreen`に組み込む。位置情報が無い場合の手動入力にも対応する。（REQ-2）— 依存: T14
+- [ ] T15: `StoreCandidatePicker`を実装し`MemoEditScreen`に組み込む。フォーム内インラインの候補チップ（候補1・候補2・手動で入力）として表示し、位置情報が無い場合の手動入力にも対応する。（REQ-2, Figma: 03_メモ作成編集 node-id 2:4）— 依存: T14
   - 検証: フェイクの`StoreSearchRepository`が返す候補一覧から選択できること、位置情報が無い場合は手動入力欄が表示されることをWidgetテストで確認する。
-- [ ] T16: `MemoEditScreen`にサービングマシンの選択UI（事前定義リスト＋自由入力）を追加する。（REQ-5）— 依存: T14
+- [ ] T16: `MemoEditScreen`にサービングマシンの選択UI（事前定義リスト＋自由入力）を追加する。（REQ-5, Figma: 03_メモ作成編集 node-id 2:4）— 依存: T14
   - 検証: 事前定義リストからの選択と自由入力の両方が`Memo.servingMachine`に反映されることをWidgetテストで確認する。
-- [ ] T17: `ImpressionListEditor`を実装し、`MemoEditScreen`に組み込む（感想の箇条書き追加・編集・削除）。（REQ-6）— 依存: T14
+- [ ] T17: `ImpressionListEditor`を実装し、`MemoEditScreen`に組み込む（感想の箇条書き追加・編集・削除）。（REQ-6, Figma: 03_メモ作成編集 node-id 2:4）— 依存: T14
   - 検証: 追加・編集・削除の操作でリストの内容が期待通り変化することをWidgetテストで確認する。
-- [ ] T18: `MemoEditScreen`に5軸評価（口当たり・素材の活かし方・個性的・フレーバーの良さ・温度管理、各1〜5）の入力UIを追加する。（REQ-7）— 依存: T14
+- [ ] T18: `MemoEditScreen`に5軸評価（口当たり・素材の活かし方・個性的・フレーバーの良さ・温度管理、各1〜5）の入力UIを追加する。（REQ-7, Figma: 03_メモ作成編集 node-id 2:4）— 依存: T14
   - 検証: 各軸の入力操作が`Memo.tasteRating`の対応する値に反映されることをWidgetテストで確認する。
 
 ## presentation層（メモ一覧・地図）
 
-- [ ] T19: `ListScreen`を実装し、日付・お店・サービングマシンを含む一覧表示を行う。（REQ-3）— 依存: T12
+- [ ] T19: `ListScreen`を実装し、日付・お店・サービングマシンを含む一覧表示を行う。（REQ-3, Figma: 01_メモ一覧_リスト node-id 2:2）— 依存: T12
   - 検証: フェイクの`memoListProvider`にテストデータを流し、一覧に日付・お店・サービングマシンが表示されることをWidgetテストで確認する。
 - [ ] T20: `ServingMachineFilterBar`を実装し`ListScreen`に組み込む。（REQ-5）— 依存: T19
   - 検証: フィルタ選択操作で`servingMachineFilterProvider`の値が更新されることをWidgetテストで確認する。
-- [ ] T21: `MapScreen`を実装し、位置情報を持つメモをピン表示する。（REQ-4）— 依存: T12
+- [ ] T21: `MapScreen`を実装し、位置情報を持つメモをピン表示する。（REQ-4, Figma: 02_メモ一覧_マップ node-id 2:3）— 依存: T12
   - 検証: `google_maps_flutter`をフェイクに差し替え、位置情報を持つメモの数だけマーカーが生成されること、位置情報が無いメモは除外されることをWidgetテストで確認する。
 - [ ] T22: `ViewToggle`を実装し、`ListScreen`/`MapScreen`を切り替えられるようにする。（REQ-4）— 依存: T19, T21
   - 検証: トグル操作で`viewModeProvider`が切り替わり、表示されるWidgetが`ListScreen`/`MapScreen`間で切り替わることをWidgetテストで確認する。
@@ -74,12 +74,12 @@
   - 検証: フィルタ設定後、`ListScreen`と`MapScreen`の両方で同じ絞り込み結果になることをWidgetテストで確認する。
 - [ ] T25: `TasteRadarChart`を`fl_chart`で実装する。5軸評価が未入力の場合は未評価プレースホルダーを表示する。（REQ-7）— 依存: T12
   - 検証: 5軸評価ありの場合はレーダーチャートが描画されること、未入力（全項目null）の場合はプレースホルダーが表示されることをWidgetテストで確認する。
-- [ ] T26: `MemoDetailScreen`を実装し、感想リストの表示と`TasteRadarChart`の表示、`MemoEditScreen`への編集導線を提供する。メモ一覧からのタップで（モーダルではなく）タブ内スタックにpushする。（REQ-6, REQ-7, REQ-8）— 依存: T17, T18, T25, T23
+- [ ] T26: `MemoDetailScreen`を実装し、感想リストの表示と`TasteRadarChart`の表示、`MemoEditScreen`への編集導線を提供する。メモ一覧からのタップで（モーダルではなく）タブ内スタックにpushする。（REQ-6, REQ-7, REQ-8, Figma: 04_メモ詳細 node-id 2:5）— 依存: T17, T18, T25, T23
   - 検証: 感想リスト・レーダーチャートが表示されること、編集ボタンから`MemoEditScreen`へ遷移すること、一覧からのタップがモーダルではなく通常pushであることをWidgetテストで確認する。
 
 ## presentation層（設定）
 
-- [ ] T27: `SettingsScreen`を実装し、T2の「設定」ブランチに接続する。ニックネーム編集、アイコン選択・表示、アプリバージョン表示を行う。（REQ-9）— 依存: T13, T2
+- [ ] T27: `SettingsScreen`を実装し、T2の「設定」ブランチに接続する。ニックネーム編集、アイコン選択・表示、アプリバージョン表示を行う。（REQ-9, Figma: 05_設定 node-id 2:6）— 依存: T13, T2
   - 検証: ニックネーム編集・アイコン選択（フェイクの`image_picker`）が`profileProvider`に反映されること、アプリバージョンが表示されることをWidgetテストで確認する。
 
 ## テスト（横断的な統合検証）

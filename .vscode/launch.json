@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "icecream_log (debug)",
+            "request": "launch",
+            "type": "dart",
+            "cwd": "mobile",
+            "program": "lib/main.dart",
+            "flutterMode": "debug",
+            "args": [
+                "--dart-define-from-file=${workspaceFolder}/mobile/.env.local"
+            ]
+        },
+        {
+            "name": "icecream_log (release)",
+            "request": "launch",
+            "type": "dart",
+            "cwd": "mobile",
+            "program": "lib/main.dart",
+            "flutterMode": "release",
+            "args": [
+                "--dart-define-from-file=${workspaceFolder}/mobile/.env.local"
+            ]
+        }
+    ]
+}

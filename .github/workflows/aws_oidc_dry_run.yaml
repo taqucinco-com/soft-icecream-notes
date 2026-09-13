@@ -1,0 +1,45 @@
+name: AWS OIDC
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  aws-oidc:
+    runs-on: ubuntu-latest
+    environment: develop
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-northeast-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Get secret value
+        run: |
+          aws secretsmanager get-secret-value \
+            --secret-id "taqucinco-com/soft-icecream-notes/example" \
+            --query "SecretString" \
+            --output text
+
+      - name: Get parameter value
+        id: get-parameter
+        run: |
+          PARAM_VALUE=$(aws ssm get-parameter \
+            --name "/taqucinco-com/soft-icecream-notes/example" \
+            --with-decryption \
+            --query "Parameter.Value" \
+            --output text)
+          echo "PARAM_VALUE=$PARAM_VALUE" >> "$GITHUB_OUTPUT"
+
+      - name: Use parameter value
+        env:
+          PARAM_VALUE: ${{ steps.get-parameter.outputs.PARAM_VALUE }}
+        run: echo "value is $PARAM_VALUE"

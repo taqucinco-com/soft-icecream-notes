@@ -1,0 +1,132 @@
+name: iOS simulator idb dry run
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios-simulator-idb:
+    #   1. idb-companionのformulaが `depends_on xcode: "26.0"` を要求する。
+    #      macos-15のデフォルトXcodeは16.4なので、そのままではbrew installが失敗する。
+    #   2. idb-cliのbottleはarm64_tahoe(macOS 26)向けしか無い。macos-15だとソースビルドになる。
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      SIMULATOR_NAME: "ci_idb_test"
+      ARTIFACT_DIR: "idb-artifacts"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Create and boot iOS Simulator
+        run: |
+          RUNTIME_JSON=$(xcrun simctl list runtimes --json \
+            | jq -c '[.runtimes[] | select(.isAvailable and (.identifier | contains("iOS")))]
+                     | sort_by(.version | split(".") | map(tonumber)) | last')
+          DEVICE_JSON=$(xcrun simctl list devicetypes --json \
+            | jq -c '[.devicetypes[] | select(.productFamily == "iPhone")]
+                     | (map(select(.name == "iPhone 16")) + .) | first')
+
+          RUNTIME=$(jq -r '.identifier' <<< "$RUNTIME_JSON")
+          RUNTIME_NAME=$(jq -r '.name' <<< "$RUNTIME_JSON")
+          DEVICE_TYPE=$(jq -r '.identifier' <<< "$DEVICE_JSON")
+          DEVICE_NAME=$(jq -r '.name' <<< "$DEVICE_JSON")
+
+          UDID=$(xcrun simctl create "$SIMULATOR_NAME" "$DEVICE_TYPE" "$RUNTIME")
+          echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+
+          xcrun simctl boot "$UDID"
+
+          echo "OS      : $RUNTIME_NAME ($RUNTIME)"
+          echo "デバイス: $DEVICE_NAME ($DEVICE_TYPE)"
+          echo "Xcode   : $(xcodebuild -version | tr '\n' ' ')"
+          echo "UDID    : $UDID"
+
+          {
+            echo "### 実行環境"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "| --- | --- |"
+            echo "| OS | $RUNTIME_NAME |"
+            echo "| デバイス | $DEVICE_NAME |"
+            echo "| Xcode | $(xcodebuild -version | head -1) |"
+            echo "| UDID | \`$UDID\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # idbはHomebrewのfacebook/fbタップから入れる（READMEのpip3 install fb-idbではなく、
+      # 手元の環境と同じidb-cli formulaを使う）。
+      - name: Install idb
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: |
+          brew tap facebook/fb
+          # 新しいHomebrewは非公式タップの明示的なtrustを要求する。未対応バージョンでは
+          # コマンド自体が無いが、その場合はtrustも不要なので失敗を無視してよい。
+          brew trust --tap facebook/fb || echo "brew trust は未対応（このバージョンでは不要）"
+          brew install facebook/fb/idb-companion facebook/fb/idb-cli
+          idb_companion --version
+      # 先に起動を開始してあるので、ここは残りの起動待ちだけ。
+      # `bootstatus`は、状態がBootedでもData Migrationが終わっていなければきちんと待つ。
+      # "Device already booted, nothing to do." を返すのは起動が本当に完了した後だけなので、
+      # 分割しても関門として機能する。
+      # ただし「起動完了」と「idbが画面を読める」は別で、後者は後段の
+      # "Wait until idb can read the UI" で待つ必要がある。
+      - name: Wait for simulator boot
+        run: xcrun simctl bootstatus "$SIMULATOR_UDID"
+
+      # companionを起動してCLIと接続する。シミュレータを作り直すたびに必要。
+      - name: Connect idb to the simulator
+        run: |
+          idb connect "$SIMULATOR_UDID"
+          idb list-targets | grep "$SIMULATOR_UDID"
+
+      # `idb connect`直後の最初のアクセシビリティ要求は失敗する。ホーム画面の描画は
+      # 終わっていても、
+      #   No translation object returned for simulator. ...
+      # を返して終了コード1・出力0バイトになる（手元のmacOSでも同じ順序で再現した）。
+      # 1秒後に再試行すると成功するので、初回だけの初期化の問題とみて再試行で待つ。
+      #
+      # 終了コードだけでは「idbが実際に画面を読めているか」が分からないため、ここで取得した
+      # アクセシビリティツリーをアーティファクトにも残す。以降のステップは準備完了を前提にできる。
+      - name: Wait until idb can read the UI
+        run: |
+          mkdir -p "$ARTIFACT_DIR"
+          for i in $(seq 1 30); do
+            if idb ui describe-all --udid "$SIMULATOR_UDID" > "$ARTIFACT_DIR/describe-all.json" 2>"$ARTIFACT_DIR/describe-all.err" \
+               && [ -s "$ARTIFACT_DIR/describe-all.json" ]; then
+              echo "アクセシビリティツリーを取得（試行 ${i} 回目）"
+              echo "要素数: $(jq '[.[] | select(.AXLabel != null)] | length' "$ARTIFACT_DIR/describe-all.json")"
+              jq -r '[.[] | select(.AXLabel != null)][] | "\(.type)\t\(.AXLabel)"' "$ARTIFACT_DIR/describe-all.json"
+              exit 0
+            fi
+            echo "試行 ${i}: まだ取得できない（$(head -1 "$ARTIFACT_DIR/describe-all.err")）"
+            sleep 2
+          done
+          echo "60秒待ってもアクセシビリティツリーを取得できなかった" >&2
+          exit 1
+
+      - name: Capture screenshot before tap
+        run: xcrun simctl io "$SIMULATOR_UDID" screenshot "$ARTIFACT_DIR/before-tap.png"
+
+      - name: Tap with idb
+        run: idb ui tap --udid "$SIMULATOR_UDID" 20 200
+
+      - name: Capture screenshot after tap
+        run: |
+          sleep 2
+          xcrun simctl io "$SIMULATOR_UDID" screenshot "$ARTIFACT_DIR/after-tap.png"
+
+      - name: Upload idb artifacts
+        if: always() && env.SIMULATOR_UDID != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: idb-dry-run
+          path: ${{ env.ARTIFACT_DIR }}
+
+      - name: Dump idb and simulator info on failure
+        if: failure()
+        run: |
+          idb list-targets || true
+          xcrun simctl list devices || true
+          cat /tmp/idb/*.log 2>/dev/null || true

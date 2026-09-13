@@ -2,13 +2,31 @@
 
 対応する要件定義: [requirements.md](./requirements.md)
 
+## Figmaワイヤーフレームとの対応関係
+
+主要フローのワイヤーフレームを以下のFigmaファイルで管理する。実装・Widgetテスト（将来的なgoldenテストを含む）双方の視覚的なリファレンスとして用いる。
+
+参照: [soft-icecream-notes ワイヤーフレーム](https://www.figma.com/design/SJrMIHprlAHd0LQVMDTaGz/soft-icecream-notes-%E3%83%AF%E3%82%A4%E3%83%A4%E3%83%BC%E3%83%95%E3%83%AC%E3%83%BC%E3%83%A0)（Wireframesページ）
+
+| Figmaフレーム（node-id） | 対応する画面/コンポーネント | 対応要件 |
+|---|---|---|
+| 01_メモ一覧_リスト（2:2） | `ListScreen`（`NotesTabScreen`内） | REQ-3, REQ-5, REQ-8 |
+| 02_メモ一覧_マップ（2:3） | `MapScreen`（`NotesTabScreen`内） | REQ-4, REQ-5, REQ-8 |
+| 03_メモ作成編集（2:4） | `MemoEditScreen`（`StoreCandidatePicker`, サービングマシン選択, `ImpressionListEditor`, 5軸評価入力を内包） | REQ-1, REQ-2, REQ-5, REQ-6, REQ-7, REQ-8 |
+| 04_メモ詳細（2:5） | `MemoDetailScreen`（`TasteRadarChart`を含む） | REQ-6, REQ-7 |
+| 05_設定（2:6） | `SettingsScreen` | REQ-9 |
+
+各フレームへの直接リンクは、上記URLに`?node-id=<node-idのハイフン区切り>`を付与して開く（例: 03は`?node-id=2-4`）。
+
+ワイヤーフレームで判明した設計上の詳細を1点反映する: `StoreCandidatePicker`は独立したダイアログ/シートではなく、フォーム内にインラインの候補チップ（候補1・候補2・手動で入力）として表示される構成になっている（後述のコンポーネント一覧を参照）。
+
 ## 技術選定（確定事項）
 
 | 項目 | 選定 | 理由 |
 |---|---|---|
 | 店舗候補検索 | Google Places API (Nearby Search) | 日本国内の小規模店舗も含めた網羅性・精度を優先 |
 | 店舗検索結果キャッシュ | drift（`StoreSearchCache`テーブル、TTL既定30日） | APIコスト削減のため、アプリ再起動をまたいで永続化する |
-| 地図表示 | Google Maps (`google_maps_flutter`) | 表示品質・情報量を優先 |
+| 地図表示 | Google Maps (`google_maps_flutter`) | 表示品質・情報量を優先(https://codelabs.developers.google.com/codelabs/google-maps-in-flutter?hl=ja#3) |
 | ローカルDB | SQLite (`drift`) | フィルタ・検索条件をSQLで型安全に表現できる |
 | 状態管理 | Riverpod | Flutterで標準的で、非同期のDB/API呼び出しとの相性が良い |
 | Exif読み取り | `exif` パッケージ（Dart実装） | ネイティブ依存が少なく日時・GPSタグの読み取りに十分 |
@@ -17,7 +35,7 @@
 | ルーティング | `go_router`（`StatefulShellRoute`） | ボトムナビゲーションのタブごとに画面スタックを保持しつつ、宣言的にモーダル遷移も扱える |
 | プロフィール保存 | `shared_preferences` | ニックネーム・アイコンパスは単一レコードのみで、SQLによる検索・フィルタが不要なため |
 | アプリバージョン取得 | `package_info_plus` | ビルド設定からアプリバージョンを取得する標準的な手段 |
-| DI（依存性注入） | Riverpod（`riverpod_generator`の`@riverpod`） | 状態管理とDIを1つの仕組みに統一できる。2026年時点でもRiverpod単体でのDIが主流であり、`get_it`/`injectable`は不採用（参考: [live4inc/magma-app](https://github.com/live4inc/magma-app)） |
+| DI（依存性注入） | Riverpod（`riverpod_generator`の`@riverpod`）。`flutter_riverpod`/`riverpod`は`3.3.2`に固定 | 状態管理とDIを1つの仕組みに統一できる。2026年時点でもRiverpod単体でのDIが主流であり、`get_it`/`injectable`は不採用（参考: [live4inc/magma-app](https://github.com/live4inc/magma-app)）。`riverpod`3.4系は本実装時点で`riverpod_generator`が未追従のため、両者互換の`3.3.2`系に固定した |
 | テストダブル | `mocktail` | コード生成不要でループエンジニアリングの反復速度を落とさないため、`mockito`（要build_runner）より優先 |
 
 いずれもAPIキー・課金が発生しうる選択（Google Places API, Google Maps）はユーザー承認済み。
@@ -141,6 +159,7 @@ Stream<List<Memo>> memoList(Ref ref) {
   - `shared_preferences`: `SharedPreferences.setMockInitialValues`、`package_info_plus`: `PackageInfo.setMockInitialValues`を用いる
   - `image_picker` / `google_maps_flutter`等プラットフォームチャネルに依存するWidgetは、Riverpodの`ProviderScope(overrides: [...])`でDI用プロバイダをフェイクに差し替えた上でWidgetテストする
 - tasks.mdの各タスクは「実装」と「その実装を検証する自動テスト」を同一タスク内で完了させることを原則とし、テストを後続タスクへ先送りしない。1タスク（ループの1イテレーション）の完了条件は「対応するテストがgreenであること」とする。
+- presentation層のWidgetテストは、「Figmaワイヤーフレームとの対応関係」に挙げた該当フレームを一次情報とし、要素の有無・大まかな配置がワイヤーフレームと矛盾しないことを確認する。将来goldenテストを導入する場合も、このフレームのスクリーンショットを比較対象の起点とする。
 
 ### テストダブルの方針
 
@@ -157,7 +176,7 @@ Stream<List<Memo>> memoList(Ref ref) {
 - `ViewToggle`: `ListScreen` / `MapScreen` を切り替えるUI（REQ-4）
 - `SettingsScreen`: 「設定」ブランチのルート画面。ニックネーム編集・アイコン選択・アプリバージョン表示を含む（REQ-9）
 - `MemoEditScreen`: 写真取り込み・Exif抽出結果の確認・手動編集（REQ-1, REQ-2, REQ-5）。感想リストの追加・編集・削除（REQ-6）、5軸評価の入力（REQ-7）もここで行う
-- `StoreCandidatePicker`: 店舗候補から選択、または手動入力するダイアログ/シート（REQ-2）
+- `StoreCandidatePicker`: `MemoEditScreen`のフォーム内にインライン表示する候補チップ群。店舗候補（例: 候補1・候補2）から選択、または「手動で入力」を選ぶと自由入力欄に切り替わる（REQ-2、Figma: 03_メモ作成編集）
 - `ServingMachineFilterBar`: サービングマシンでの絞り込みUI（REQ-5）
 - `MemoDetailScreen`: メモの閲覧専用画面。感想リストの表示（REQ-6）、`TasteRadarChart`による5軸評価の表示（REQ-7）。編集ボタンから`MemoEditScreen`へ遷移する
 - `ImpressionListEditor`: 感想を箇条書きで追加・編集・削除するウィジェット（REQ-6）
