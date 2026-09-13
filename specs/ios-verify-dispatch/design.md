@@ -76,7 +76,7 @@ Android版 `flutter-ui-verify-ci` のiOS版。`claude-ios.yaml`内のClaude Code
   3. Ruby/CocoaPods、Pub cache、Flutterセットアップ、`flutter pub get`・codegen（`ios_simulator_dry_run.yaml`を踏襲）。
   4. `pod install`。
   5. iOS Simulator作成・起動、`idb-companion`/`idb-cli`インストール、`idb connect`、UI読み取り確認まで（`ios_simulator_idb_dry_run.yaml`を踏襲）。
-  6. `anthropics/claude-code-action@v1`を実行。`prompt`に、inputから復元した「元の依頼内容」「`claude.yml`側（`ios-verify-judge`agent）の判断理由」を埋め込み、`flutter-ui-ios-verify-ci`スキルを使ってiOS Simulator上で検証するよう指示する。
+  6. `anthropics/claude-code-action@v1`を実行。`prompt`に`${{ inputs.original_request }}`/`${{ inputs.judged_reason }}`をそのまま埋め込み（デコード不要）、`flutter-ui-ios-verify-ci`スキルを使ってiOS Simulator上で検証するよう指示する。
   7. スクリーンショット等の成果物を`work/screenshots/`から`actions/upload-artifact@v4`でアップロード（既存Android側と同じ命名パターン）。
   8. 完了時、`target_type`/`target_number`に応じて`gh pr comment`または`gh issue comment`で、依頼の完了状況（完了/未完了とその理由）を投稿する（要件8, CLAUDE.mdのGitHub Actions応答ルール準拠）。
 
@@ -89,10 +89,10 @@ Android版 `flutter-ui-verify-ci` のiOS版。`claude-ios.yaml`内のClaude Code
 | `target_type` | string (`pr` \| `issue`) | 結果をコメントする先がPRかIssueか |
 | `target_number` | string | PR番号またはIssue番号 |
 | `head_ref` | string | チェックアウト対象のブランチ名（PRのhead ref） |
-| `original_request_b64` | string | 依頼元コメント本文（改行・引用符を含みうるためbase64エンコードして渡す） |
-| `judged_reason_b64` | string | `claude.yml`側でiOS確認が必要と判断した理由・そこまでの調査結果（同様にbase64エンコード） |
+| `original_request` | string | 依頼元コメント本文 |
+| `judged_reason` | string | `claude.yml`側でiOS確認が必要と判断した理由・そこまでの調査結果 |
 
-`workflow_dispatch`のinput値はシェル経由でCLIに渡す都合上、改行やダブルクォートを含む文字列をそのまま渡すと壊れやすい。そのため本文系の2項目はbase64エンコードして渡し、`claude-ios.yaml`側の該当ステップで`base64 -d`してから`claude_args`の`prompt`に埋め込む。
+`original_request`/`judged_reason`はbase64エンコードせず生のテキストで渡す（Issue #56での実運用で判明した問題点は既知のリスク節を参照）。`gh workflow run`コマンド自体をシングルクォートで1つの単純なコマンドとして組み立てる（3.参照）ことでシェル側の壊れやすさに対処し、受け取った`claude-ios.yaml`側では`${{ inputs.original_request }}`/`${{ inputs.judged_reason }}`をそのまま`prompt`に埋め込む（デコード処理は不要）。
 
 ## `ios-verify-judge`agentの呼び出しインターフェース
 
@@ -104,16 +104,12 @@ Android版 `flutter-ui-verify-ci` のiOS版。`claude-ios.yaml`内のClaude Code
 ## `claude.yml` → `claude-ios.yaml` 起動コマンド（`ios-verify-dispatch`スキルに実装として記載）
 
 ```bash
-gh workflow run claude-ios.yaml \
-  --ref develop \
-  -f target_type="pr" \
-  -f target_number="123" \
-  -f head_ref="feat/xxx" \
-  -f original_request_b64="$(base64 <<< "$ORIGINAL_REQUEST")" \
-  -f judged_reason_b64="$(base64 <<< "$JUDGED_REASON")"
+gh workflow run claude-ios.yaml --ref develop -f target_type='pr' -f target_number='123' -f head_ref='feat/xxx' -f original_request='依頼元のコメント本文をここに直接埋め込む（本文中の'\''はエスケープする）' -f judged_reason='ios-verify-judgeが返した理由をここに直接埋め込む'
 ```
 
 `--ref develop`固定とすることで、`claude-ios.yaml`自体がまだ存在しないPRブランチからでも確実に起動できる（ユーザー承認済みの設計判断）。実際に検証すべきブランチは`head_ref`で別途渡し、`claude-ios.yaml`内の`actions/checkout`で明示的にそのrefをチェックアウトする。
+
+このコマンドは**`gh workflow run`から始まる単一のコマンドとして実行する**必要がある（他のコマンドと`;`/`&&`で連結しない、事前の`gh --version`等の疎通確認を行わない、`$(...)`や`$VAR`によるシェル展開を使わない）。理由は既知のリスク節を参照。
 
 # 各要件と設計要素の対応関係（トレーサビリティ）
 
@@ -144,7 +140,8 @@ gh workflow run claude-ios.yaml \
 ## 既知のリスク
 
 - **フォーク由来のPRでの動作**: フォークからのPRでは`GITHUB_TOKEN`の権限が制限され、`secrets`も既定では渡らないため、`gh workflow run`自体が失敗しうる。既存の`claude.yml`も同様の前提（内部コントリビュータ想定）に立っており、本機能もその前提を踏襲する。
-- **`workflow_dispatch`のinput文字数制限**: GitHub Actionsの`workflow_dispatch` inputには実用上の長さ制限がある。コメント本文が非常に長い場合、`original_request_b64`が切り詰められる可能性があり、その場合は要約して渡すなどの対応が実装時に必要になる。
+- **`workflow_dispatch`のinput文字数制限**: GitHub Actionsの`workflow_dispatch` inputには実用上の長さ制限がある。コメント本文が非常に長い場合、`original_request`が切り詰められる可能性があり、その場合は要約して渡すなどの対応が実装時に必要になる。
 - **`idb-companion`のインストール不安定性**: `ios_simulator_idb_dry_run.yaml`のコメントにある通り、Homebrewの非公式タップ経由のインストールで`brew trust`の要否がバージョンによって変わるなど、将来的なランナーイメージ更新で壊れる可能性がある。
+- **非対話的なBash権限モデルでの複合コマンド・未許可コマンドの承認待ち（Issue #56で実際に発生）**: `claude.yml`の`--allowedTools`は`Bash(gh workflow run:*)`という単一コマンドの完全一致に近い形でしか許可していない。実際の運用で、Claudeが本番の`gh workflow run`を実行する前に`gh --version`で疎通確認しようとしたところ、この確認コマンドが許可リストに無いため承認待ち状態になり、非対話的なCI実行では誰も承認できずそのまま失敗し、本来のiOS確認依頼を引き継げなかった（Issue #56）。同様に、`base64`/`tr`等の別コマンドや、`;`・`&&`・`$(...)`・`$VAR`を含む複合コマンドも「静的に許可コマンドと一致すると判定できない」として承認待ちになりうる。これを踏まえ、`ios-verify-dispatch`skillは(a)事前疎通確認をしない、(b)`gh workflow run`/`gh pr comment`/`gh issue comment`それぞれを単独の単純なコマンドとして実行する、(c)base64エンコードをやめてシングルクォートによる直接埋め込みに変更する、という形に修正した。同種の問題は`--allowedTools`に新しいコマンドを追加するたびに再発しうるため、新しいコマンドを許可リストに追加する際は「Claudeがそのコマンドだけを単独で呼び出すよう明示的に指示する」こととセットで行う。
 - **`[ui-verify]`とiOS判断の同時成立**: 要件6により両立を許容する設計としたが、実際に両方が真になるケース（Android・iOS両方の確認を1つの依頼で求められる場合）のテストケースは`tasks.md`で明示的に確保する必要がある。
 - **判断基準の主観性**: 「iOS確認が必要か」はキーワード一致ではなくClaudeの意味的判断に委ねるため、判断がぶれる（過剰起動・見送りの双方）可能性がある。判断基準の例示（コンポーネント2）を継続的に調整する運用が前提になる。

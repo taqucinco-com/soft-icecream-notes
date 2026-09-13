@@ -18,12 +18,12 @@ on:
         description: "検証対象のブランチ名（PRのhead ref）"
         required: true
         type: string
-      original_request_b64:
-        description: "依頼元コメント本文（base64エンコード）"
+      original_request:
+        description: "依頼元コメント本文"
         required: true
         type: string
-      judged_reason_b64:
-        description: "claude.yml側でiOS確認が必要と判断した理由（base64エンコード）"
+      judged_reason:
+        description: "claude.yml側でiOS確認が必要と判断した理由"
         required: true
         type: string
 
@@ -156,21 +156,6 @@ jobs:
           cat /tmp/describe-all.err >&2 || true
           exit 1
 
-      - name: Decode dispatch payload
-        run: |
-          DELIMITER="PAYLOAD_EOF_$(uuidgen)"
-          {
-            echo "ORIGINAL_REQUEST<<$DELIMITER"
-            base64 -d <<< "${{ inputs.original_request_b64 }}"
-            echo "$DELIMITER"
-          } >> "$GITHUB_ENV"
-          DELIMITER="PAYLOAD_EOF_$(uuidgen)"
-          {
-            echo "JUDGED_REASON<<$DELIMITER"
-            base64 -d <<< "${{ inputs.judged_reason_b64 }}"
-            echo "$DELIMITER"
-          } >> "$GITHUB_ENV"
-
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -189,13 +174,13 @@ jobs:
             対象: ${{ inputs.target_type }} #${{ inputs.target_number }}（ブランチ: ${{ inputs.head_ref }}）
 
             元の依頼内容:
-            ${{ env.ORIGINAL_REQUEST }}
+            ${{ inputs.original_request }}
 
             claude.yml側の判断理由・そこまでの調査結果:
-            ${{ env.JUDGED_REASON }}
+            ${{ inputs.judged_reason }}
 
             flutter-ui-ios-verify-ciスキルを使い、iOS Simulator上でUI検証を行ってください。
-            完了したら、依頼がどこまで完了したか（未完了の場合はその原因と次にすべきこと）を、対象が`pr`なら`gh pr comment ${{ inputs.target_number }}`、`issue`なら`gh issue comment ${{ inputs.target_number }}`でコメントしてください（CLAUDE.mdのGitHub Actions応答ルールに従うこと）。
+            完了したら、依頼がどこまで完了したか（未完了の場合はその原因と次にすべきこと）を、対象が`pr`なら`gh pr comment ${{ inputs.target_number }} --body '...'`、`issue`なら`gh issue comment ${{ inputs.target_number }} --body '...'`でコメントしてください（CLAUDE.mdのGitHub Actions応答ルールに従うこと）。このコマンドは`gh pr comment`または`gh issue comment`だけから始まる単一のコマンドとして実行し、事前に`gh --version`等で疎通確認をしたり、他のコマンドと`;`や`&&`で連結したりしないでください（許可されていないコマンドと組み合わせると、非対話的なCI実行では承認待ちのまま失敗します）。本文は`--body`に直接シングルクォートで埋め込み、本文中の`'`は`'\''`に置き換えてください。
 
           claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(idb:*),Bash(xcrun:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh pr comment:*),Bash(gh issue comment:*)"'
 
