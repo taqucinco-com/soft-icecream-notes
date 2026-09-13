@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:icecream_log/features/memo/application/providers/memo_list.dart';
 import 'package:icecream_log/features/memo/domain/entities/memo.dart';
 import 'package:icecream_log/presentation/format/date_format.dart';
+import 'package:icecream_log/presentation/memo_detail/widgets/memo_location_map.dart';
 import 'package:icecream_log/presentation/memo_detail/widgets/taste_radar_chart.dart';
 
 /// Figma 04フレーム（メモ詳細）。
@@ -116,6 +117,10 @@ class _DetailContent extends StatelessWidget {
               const SizedBox(height: 24),
               Text('味の5軸評価', style: Theme.of(context).textTheme.titleSmall),
               TasteRadarChart(rating: memo.tasteRating),
+              const SizedBox(height: 24),
+              Text('お店の位置', style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 8),
+              MemoLocationMap(memo: memo),
               const SizedBox(height: 24),
             ],
           ),
