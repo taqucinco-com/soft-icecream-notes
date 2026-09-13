@@ -43,3 +43,6 @@
 
 - [ ] 14. ブランチをpushし、`gh workflow run claude-ios.yaml`で手動動作確認を行う（ユーザー確認の上で実施。Simulator起動・idb接続・Claude起動・コメント投稿までの一連の流れをログで確認する）
   - 対応: requirements.md #7, #8, #9, #10 の動作確認
+
+- [x] 15. Issue #56の実運用で判明した不具合を修正する。`claude.yml`の非対話的Bash権限モデルでは`Bash(gh workflow run:*)`しか許可されておらず、事前の`gh --version`疎通確認や、base64エンコード用の別コマンド・複合コマンドが承認待ちのまま失敗し、`claude-ios.yaml`を起動できなかった。(a) `ios-verify-dispatch`skillを、事前疎通確認をしない・`gh workflow run`/`gh pr comment`/`gh issue comment`を単独の単純なコマンドとして実行する・base64をやめてシングルクォート直接埋め込みにする内容に修正、(b) `claude-ios.yaml`の`workflow_dispatch.inputs`を`original_request_b64`/`judged_reason_b64`から`original_request`/`judged_reason`に変更しデコードステップを削除、(c) `design.md`のデータモデル・既知のリスク節を更新
+  - 対応: requirements.md #1, #2, #3, #4 / design.md コンポーネント3・6、データモデル節、既知のリスク節
