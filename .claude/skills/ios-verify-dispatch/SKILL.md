@@ -31,7 +31,7 @@ agentは以下の形式で応答する。
 - `head_ref`: 検証対象のブランチ名。**PRコメント/PRレビュー由来の依頼の場合、`claude.yml`の`actions/checkout`は既定でベースブランチをチェックアウトしており、`git branch --show-current`はPRのhead refと一致しないことがある。** 必ず`gh pr view <PR番号> --json headRefName -q .headRefName`で取得すること（`--allowedTools`に`Bash(gh pr view:*)`として許可済みの単独コマンド）。Issueコメント由来で、Claude自身がこの turn で新規ブランチを作成・pushした場合は、そのブランチ名（`git branch --show-current`の結果）をそのまま使ってよい
 - `original_request`: 依頼元のコメント本文（受け取った依頼テキストそのもの）
 - `judged_reason`: `ios-verify-judge`agentが返した理由をそのまま使う
-- `source_comment_url`: 起動元となった依頼コメント（またはIssue）のパーマリンク。`claude.yml`の`Determine source comment URL`ステップが`$GITHUB_ENV`の`SOURCE_COMMENT_URL`に設定済みなので、`echo "$SOURCE_COMMENT_URL"`（単独の単純なコマンド）で取得する
+- `source_comment_url`: 起動元となった依頼コメント（またはIssue）のパーマリンク。この値は最初のプロンプト冒頭に「起動元コメントURL: ...」として直接渡されているので、それをそのまま使う。**`echo`/`printenv`/`env`等のBashコマンドで改めて取得しようとしないこと。** シェル変数展開（`$VAR`）を含むコマンドは、`Bash(echo:*)`等でコマンド自体が許可されていても「Contains simple_expansion」として承認待ちになり、非対話的なCI実行では失敗する（実際にIssue #68で発生した事故）。プロンプトに書かれている値を読んで使うだけでよい
 
 ## 3. claude-ios.yamlを起動する — 単一のシンプルなコマンドとして実行する
 
