@@ -5,7 +5,7 @@ description: GitHub Actionsの`@claude`実行(`.github/workflows/claude.yml`)で
 
 # iOS Simulator確認要否の判定とclaude-ios.yamlへの引き継ぎ
 
-`claude.yml`のジョブ内で、`ios-verify-judge`agentを呼び出してiOS Simulatorでの確認要否を判定させ、必要であれば`claude-ios.yaml`を起動するための手順。**判定基準そのものは`ios-verify-judge`agent側の責務であり、このskillでは扱わない。**
+`claude.yml`のジョブ内で、`ios-verify-judge`agentを呼び出してiOS Simulatorでの確認要否を判定させ、必要であれば`claude-ios.yaml`を起動するための手順。**判定基準そのものは`ios-verify-judge`agent側の責務であり、このskillでは扱わない。**Android版として`android-verify-judge`agent/`android-verify-dispatch`skillが対称に存在し、`claude-android.yaml`を起動する（ロジックはほぼ同一で、呼び出すagentと起動先ワークフローだけが異なる）。
 
 ## 1. `ios-verify-judge`agentを呼び出す
 

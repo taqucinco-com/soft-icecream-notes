@@ -1,0 +1,216 @@
+name: Claude Code (Android Emulator)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_type:
+        description: "コメント/結果の投稿先"
+        required: true
+        type: choice
+        options:
+          - pr
+          - issue
+      target_number:
+        description: "対象のPR番号またはIssue番号"
+        required: true
+        type: string
+      head_ref:
+        description: "検証対象のブランチ名（PRのhead ref）"
+        required: true
+        type: string
+      original_request:
+        description: "依頼元コメント本文"
+        required: true
+        type: string
+      judged_reason:
+        description: "claude.yml側でAndroid確認が必要と判断した理由"
+        required: true
+        type: string
+
+jobs:
+  claude-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: develop
+    env:
+      ANDROID_API_LEVEL: "34"
+      ANDROID_AVD_NAME: "ci_test"
+      ANDROID_AVD_TARGET: "google_apis"
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head_ref }}
+          fetch-depth: 1
+
+      - name: Create mobile/.env.local from .env.sample
+        env:
+          GOOGLE_MAP_KEY_ANDROID: ${{ secrets.GOOGLE_MAP_KEY_ANDROID }}
+          GOOGLE_MAP_KEY_IOS: ${{ secrets.GOOGLE_MAP_KEY_IOS }}
+        run: |
+          sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|$GOOGLE_MAP_KEY_ANDROID|" \
+              -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|$GOOGLE_MAP_KEY_IOS|" \
+              mobile/.env.sample > mobile/.env.local
+
+      - name: Upgrade gh CLI for --attach support
+        run: |
+          GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
+          curl -fsSL -o /tmp/gh.deb "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.deb"
+          sudo apt-get install -y /tmp/gh.deb
+          gh --version
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Gradle cache
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          cache-read-only: "false"
+
+      - name: AVD cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+            /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
+          key: avd-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_AVD_TARGET }}
+
+      - name: Remove stale emulator lock files from cached AVD
+        run: find ~/.android/avd -name "*.lock" -print -exec rm -rf {} +
+
+      - name: Decode Debug Keystore
+        run: echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > mobile/android/ci-debug.keystore
+
+      - name: Set up Flutter (from mobile/.fvmrc)
+        id: flutter_setup
+        uses: kuhnroyal/flutter-fvm-config-action@v3
+        with:
+          path: mobile/.fvmrc
+          setup: "true"
+          cache: "true"
+
+      - name: Dart build_runner cache
+        uses: actions/cache@v4
+        with:
+          path: mobile/.dart_tool
+          key: dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-
+
+      - name: Install Flutter dependencies and generate code
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Discard codegen changes to tracked files
+        run: git checkout -- mobile/
+
+      - name: create and check booting AVD (via reactivecircus/android-emulator-runner)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          avd-name: ${{ env.ANDROID_AVD_NAME }}
+          force-avd-creation: false
+          target: ${{ env.ANDROID_AVD_TARGET }}
+          arch: "x86_64"
+          script: echo "AVD created and boot-verified by reactivecircus."
+
+      - name: Start Android emulator (background, without reactivecircus)
+        run: |
+          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_AVD_NAME" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim > /tmp/emulator.log 2>&1 &
+          disown
+          # shellcheck disable=SC2016
+          "$ANDROID_HOME/platform-tools/adb" wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 3; done'
+          "$ANDROID_HOME/platform-tools/adb" devices
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          additional_permissions: |
+            actions: read
+
+          show_full_output: true
+
+          prompt: |
+            claude.yml上でAndroid Emulatorでの確認が必要と判断され、このclaude-android.yamlに処理が引き継がれました。
+
+            対象: ${{ inputs.target_type }} #${{ inputs.target_number }}（ブランチ: ${{ inputs.head_ref }}）
+
+            元の依頼内容:
+            ${{ inputs.original_request }}
+
+            claude.yml側の判断理由・そこまでの調査結果:
+            ${{ inputs.judged_reason }}
+
+            flutter-ui-verify-ciスキルを使い、Android Emulator上でUI検証を行ってください。
+            完了したら、依頼がどこまで完了したか（未完了の場合はその原因と次にすべきこと）を、対象が`pr`なら`gh pr comment ${{ inputs.target_number }} --body '...'`、`issue`なら`gh issue comment ${{ inputs.target_number }} --body '...'`でコメントしてください（CLAUDE.mdのGitHub Actions応答ルールに従うこと）。このコマンドは`gh pr comment`または`gh issue comment`だけから始まる単一のコマンドとして実行し、事前に`gh --version`等で疎通確認をしたり、他のコマンドと`;`や`&&`で連結したりしないでください（許可されていないコマンドと組み合わせると、非対話的なCI実行では承認待ちのまま失敗します）。本文は`--body`に直接シングルクォートで埋め込み、本文中の`'`は`'\''`に置き換えてください。
+
+          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh pr comment:*),Bash(gh issue comment:*)"'
+
+      - name: Upload UI verification screenshots
+        if: always()
+        id: upload_screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-verify-screenshots-${{ github.run_id }}
+          path: work/screenshots/*.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Post screenshot artifact link
+        if: always() && steps.upload_screenshots.outputs.artifact-url != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_URL: ${{ steps.upload_screenshots.outputs.artifact-url }}
+        run: |
+          if [ "${{ inputs.target_type }}" = "pr" ]; then
+            gh pr comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
+          else
+            gh issue comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
+          fi
+
+      - name: Notify failure if the run did not complete
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          BODY="claude-android.yamlの実行が失敗し、Android Emulatorでの確認を完了できませんでした。ログを確認してください: $RUN_URL"
+          if [ "${{ inputs.target_type }}" = "pr" ]; then
+            gh pr comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "$BODY"
+          else
+            gh issue comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "$BODY"
+          fi
+
+      - name: Stop Android emulator
+        if: always()
+        run: |
+          "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 emu kill || true
+          for _ in $(seq 1 30); do
+            "$ANDROID_HOME/platform-tools/adb" devices 2>/dev/null | grep -q emulator-5554 || break
+            sleep 1
+          done

@@ -87,8 +87,8 @@ xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/work/screenshots/<name>.pn
 
 ## スクリーンショットの視覚的分析（VLMによる評価・JSON）
 
-目視確認・VLMによる構造的評価・JSON形式での記録は、`flutter-ui-ios-verify`skillの7節（および参照先の`flutter-ui-verify`skillの7節）の手順・チェックリスト・JSON形式（`criteria`配列、`overall_verdict`等）をそのまま使うこと。CI固有の差分はスクリーンショットの保存先パスのみ（`.claude/screenshots/mobile/`ではなく`work/screenshots/`を使う）。
+評価とその後のループは、`flutter-ui-ios-verify`skillの7節（および参照先の`flutter-ui-verify`skillの7節）の手順・チェックリスト・`ui-verify-judge`agentの呼び出し方・JSON形式（`criteria`配列、`overall_verdict`、`loop_verdict`等）をそのまま使うこと。CI固有の差分はスクリーンショットの保存先パスのみ（`.claude/screenshots/mobile/`ではなく`work/screenshots/`を使う）。
 
-7節の分岐もそのまま踏襲する。**依頼コメントで「Figma」「ワイヤーフレーム」等への明示的な言及があるときだけ7-A（Figmaとの構造的比較）を行い、言及が無いときは7-B（依頼内容に対する単純な構造分析）を行う。** 7-Bの場合、`figma_node_id`・`reference_image`は`null`にする。
+7節の分岐もそのまま踏襲する。**依頼コメントで「Figma」「ワイヤーフレーム」等への明示的な言及があるときだけ7-A（Figmaとの比較材料の用意）を行い、言及が無いときは7-B（依頼内容に対する単純な構造分析の材料の用意）を行う。** いずれの場合も7-Cで`ui-verify-judge`を呼び出し、`loop_verdict`（`pass`/`retry`/`fatal`）に応じてループする（最大10回。`retry`ではコードを修正して2節からやり直し、`fatal`では直ちに中断して人間にエスカレーションする）。7-Bの場合、`figma_node_id`・`reference_image`は`null`にする。
 
 このJSONは`--body`の本文中にコードフェンス付きで埋め込む（`--attach`は画像/動画専用のため、JSONの添付には使えない）。
