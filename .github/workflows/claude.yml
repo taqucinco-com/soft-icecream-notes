@@ -29,7 +29,7 @@ jobs:
       pull-requests: write
       issues: write
       id-token: write
-      actions: read # Required for Claude to read CI results on PRs
+      actions: write # CI結果の読み取りに加え、iOS確認が必要な場合にclaude-ios.yamlをworkflow_dispatchで起動するために必要
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -173,9 +173,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          # This is an optional setting that allows Claude to read CI results on PRs
+          # CI結果の読み取りに加え、iOS確認が必要な場合にclaude-ios.yamlをworkflow_dispatchで起動するためにwriteが必要
           additional_permissions: |
-            actions: read
+            actions: write
 
           show_full_output: true
 
@@ -185,7 +185,7 @@ jobs:
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*)"'
+          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh workflow run:*)"'
 
       - name: Upload UI verification screenshots
         if: steps.ui_verify.outputs.enabled == 'true'

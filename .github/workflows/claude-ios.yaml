@@ -1,0 +1,235 @@
+name: Claude Code (iOS Simulator)
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_type:
+        description: "コメント/結果の投稿先"
+        required: true
+        type: choice
+        options:
+          - pr
+          - issue
+      target_number:
+        description: "対象のPR番号またはIssue番号"
+        required: true
+        type: string
+      head_ref:
+        description: "検証対象のブランチ名（PRのhead ref）"
+        required: true
+        type: string
+      original_request_b64:
+        description: "依頼元コメント本文（base64エンコード）"
+        required: true
+        type: string
+      judged_reason_b64:
+        description: "claude.yml側でiOS確認が必要と判断した理由（base64エンコード）"
+        required: true
+        type: string
+
+jobs:
+  claude-ios:
+    runs-on: macos-26
+    timeout-minutes: 60
+    environment: develop
+    env:
+      SIMULATOR_NAME: "claude_ios_ci"
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.head_ref }}
+          fetch-depth: 1
+
+      - name: Create mobile/.env.local from .env.sample
+        env:
+          GOOGLE_MAP_KEY_ANDROID: ${{ secrets.GOOGLE_MAP_KEY_ANDROID }}
+          GOOGLE_MAP_KEY_IOS: ${{ secrets.GOOGLE_MAP_KEY_IOS }}
+        run: |
+          sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|$GOOGLE_MAP_KEY_ANDROID|" \
+              -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|$GOOGLE_MAP_KEY_IOS|" \
+              mobile/.env.sample > mobile/.env.local
+
+      - name: Set up Ruby (from .ruby-version)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version-file: .ruby-version
+          bundler-cache: true
+
+      - name: CocoaPods cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            mobile/ios/Pods
+          key: cocoapods-${{ runner.os }}-${{ hashFiles('mobile/ios/Podfile.lock') }}
+          restore-keys: |
+            cocoapods-${{ runner.os }}-
+
+      - name: Pub cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-cache-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            pub-cache-${{ runner.os }}-
+
+      - name: Set up Flutter (from mobile/.fvmrc)
+        id: flutter_setup
+        uses: kuhnroyal/flutter-fvm-config-action@v3
+        with:
+          path: mobile/.fvmrc
+          setup: "true"
+          cache: "true"
+
+      - name: Dart build_runner cache
+        uses: actions/cache@v4
+        with:
+          path: mobile/.dart_tool
+          key: dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-
+
+      - name: Install Flutter dependencies and generate code
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Discard codegen changes to tracked files
+        run: git checkout -- mobile/
+
+      - name: Install CocoaPods dependencies
+        working-directory: mobile/ios
+        run: |
+          pod --version
+          bundle exec pod install
+
+      - name: Create and boot iOS Simulator
+        run: |
+          RUNTIME_JSON=$(xcrun simctl list runtimes --json \
+            | jq -c '[.runtimes[] | select(.isAvailable and (.identifier | contains("iOS")))]
+                     | sort_by(.version | split(".") | map(tonumber)) | last')
+          DEVICE_JSON=$(xcrun simctl list devicetypes --json \
+            | jq -c '[.devicetypes[] | select(.productFamily == "iPhone")]
+                     | (map(select(.name == "iPhone 16")) + .) | first')
+
+          RUNTIME=$(jq -r '.identifier' <<< "$RUNTIME_JSON")
+          DEVICE_TYPE=$(jq -r '.identifier' <<< "$DEVICE_JSON")
+
+          UDID=$(xcrun simctl create "$SIMULATOR_NAME" "$DEVICE_TYPE" "$RUNTIME")
+          echo "SIMULATOR_UDID=$UDID" >> "$GITHUB_ENV"
+
+          xcrun simctl boot "$UDID"
+
+      - name: Install idb
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: "1"
+        run: |
+          brew tap facebook/fb
+          brew trust --tap facebook/fb || true
+          brew install facebook/fb/idb-companion facebook/fb/idb-cli
+          idb_companion --version
+
+      - name: Wait for simulator boot
+        run: xcrun simctl bootstatus "$SIMULATOR_UDID"
+
+      - name: Connect idb to the simulator
+        run: |
+          idb connect "$SIMULATOR_UDID"
+          idb list-targets | grep "$SIMULATOR_UDID"
+
+      - name: Wait until idb can read the UI
+        run: |
+          for _ in $(seq 1 30); do
+            if idb ui describe-all --udid "$SIMULATOR_UDID" > /tmp/describe-all.json 2>/tmp/describe-all.err \
+               && [ -s /tmp/describe-all.json ]; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/describe-all.err >&2 || true
+          exit 1
+
+      - name: Decode dispatch payload
+        run: |
+          DELIMITER="PAYLOAD_EOF_$(uuidgen)"
+          {
+            echo "ORIGINAL_REQUEST<<$DELIMITER"
+            base64 -d <<< "${{ inputs.original_request_b64 }}"
+            echo "$DELIMITER"
+          } >> "$GITHUB_ENV"
+          DELIMITER="PAYLOAD_EOF_$(uuidgen)"
+          {
+            echo "JUDGED_REASON<<$DELIMITER"
+            base64 -d <<< "${{ inputs.judged_reason_b64 }}"
+            echo "$DELIMITER"
+          } >> "$GITHUB_ENV"
+
+      - name: Run Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          additional_permissions: |
+            actions: read
+
+          show_full_output: true
+
+          prompt: |
+            claude.yml上でiOS Simulatorでの確認が必要と判断され、このclaude-ios.yamlに処理が引き継がれました。
+
+            対象: ${{ inputs.target_type }} #${{ inputs.target_number }}（ブランチ: ${{ inputs.head_ref }}）
+
+            元の依頼内容:
+            ${{ env.ORIGINAL_REQUEST }}
+
+            claude.yml側の判断理由・そこまでの調査結果:
+            ${{ env.JUDGED_REASON }}
+
+            flutter-ui-ios-verify-ciスキルを使い、iOS Simulator上でUI検証を行ってください。
+            完了したら、依頼がどこまで完了したか（未完了の場合はその原因と次にすべきこと）を、対象が`pr`なら`gh pr comment ${{ inputs.target_number }}`、`issue`なら`gh issue comment ${{ inputs.target_number }}`でコメントしてください（CLAUDE.mdのGitHub Actions応答ルールに従うこと）。
+
+          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(idb:*),Bash(xcrun:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh pr comment:*),Bash(gh issue comment:*)"'
+
+      - name: Upload UI verification screenshots
+        if: always()
+        id: upload_screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-verify-screenshots-${{ github.run_id }}
+          path: work/screenshots/*.png
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Post screenshot artifact link
+        if: always() && steps.upload_screenshots.outputs.artifact-url != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_URL: ${{ steps.upload_screenshots.outputs.artifact-url }}
+        run: |
+          if [ "${{ inputs.target_type }}" = "pr" ]; then
+            gh pr comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "[ios-verify] 検証スクリーンショット: $ARTIFACT_URL"
+          else
+            gh issue comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "[ios-verify] 検証スクリーンショット: $ARTIFACT_URL"
+          fi
+
+      - name: Notify failure if the run did not complete
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          BODY="claude-ios.yamlの実行が失敗し、iOS Simulatorでの確認を完了できませんでした。ログを確認してください: $RUN_URL"
+          if [ "${{ inputs.target_type }}" = "pr" ]; then
+            gh pr comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "$BODY"
+          else
+            gh issue comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "$BODY"
+          fi
