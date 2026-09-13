@@ -104,6 +104,8 @@ jobs:
           claude_args: >-
             --allowedTools "Task,
             WebFetch,
+            Write,
+            Edit,
             Bash(git branch:*),
             Bash(git checkout:*),
             Bash(git switch:*),
