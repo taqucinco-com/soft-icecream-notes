@@ -55,7 +55,7 @@ jobs:
           GOOGLE_MAP_KEY_ANDROID: ${{ secrets.GOOGLE_MAP_KEY_ANDROID }}
           GOOGLE_MAP_KEY_IOS: ${{ secrets.GOOGLE_MAP_KEY_IOS }}
         run: |
-          sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|$GOOGLE_MAP_KEY_ANDROID|" \
+          sed -e "s|{YOUR_GOOGLE_MAP_ANDROID_KEY_HERE}|$GOOGLE_MAP_KEY_ANDROID|" \
               -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|$GOOGLE_MAP_KEY_IOS|" \
               mobile/.env.sample > mobile/.env.local
 
