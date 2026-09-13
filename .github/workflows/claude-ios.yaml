@@ -18,6 +18,10 @@ on:
         description: "検証対象のブランチ名（PRのhead ref）"
         required: true
         type: string
+      source_comment_url:
+        description: "起動元となった依頼コメント（またはIssue）のパーマリンク"
+        required: true
+        type: string
       original_request:
         description: "依頼元コメント本文"
         required: true
@@ -172,6 +176,7 @@ jobs:
             claude.yml上でiOS Simulatorでの確認が必要と判断され、このclaude-ios.yamlに処理が引き継がれました。
 
             対象: ${{ inputs.target_type }} #${{ inputs.target_number }}（ブランチ: ${{ inputs.head_ref }}）
+            起動元コメント: ${{ inputs.source_comment_url }}
 
             元の依頼内容:
             ${{ inputs.original_request }}
@@ -180,7 +185,7 @@ jobs:
             ${{ inputs.judged_reason }}
 
             flutter-ui-ios-verify-ciスキルを使い、iOS Simulator上でUI検証を行ってください。
-            完了したら、依頼がどこまで完了したか（未完了の場合はその原因と次にすべきこと）を、対象が`pr`なら`gh pr comment ${{ inputs.target_number }} --body '...'`、`issue`なら`gh issue comment ${{ inputs.target_number }} --body '...'`でコメントしてください（CLAUDE.mdのGitHub Actions応答ルールに従うこと）。このコマンドは`gh pr comment`または`gh issue comment`だけから始まる単一のコマンドとして実行し、事前に`gh --version`等で疎通確認をしたり、他のコマンドと`;`や`&&`で連結したりしないでください（許可されていないコマンドと組み合わせると、非対話的なCI実行では承認待ちのまま失敗します）。本文は`--body`に直接シングルクォートで埋め込み、本文中の`'`は`'\''`に置き換えてください。
+            完了したら、依頼がどこまで完了したか（未完了の場合はその原因と次にすべきこと）を、対象が`pr`なら`gh pr comment ${{ inputs.target_number }} --body '...'`、`issue`なら`gh issue comment ${{ inputs.target_number }} --body '...'`でコメントしてください（CLAUDE.mdのGitHub Actions応答ルールに従うこと）。GitHubのIssue/PRコメントには本来のスレッド返信機能が無いため、**本文の先頭に`> 起動元コメントへの返信: ${{ inputs.source_comment_url }}`という引用行を入れて、起動元コメントへの返信であることが分かる形にしてください**（`claude.yml`側が残した「iOS Simulatorでの動作確認」チェックリスト項目に対応する結果報告であることが伝わるように）。このコマンドは`gh pr comment`または`gh issue comment`だけから始まる単一のコマンドとして実行し、事前に`gh --version`等で疎通確認をしたり、他のコマンドと`;`や`&&`で連結したりしないでください（許可されていないコマンドと組み合わせると、非対話的なCI実行では承認待ちのまま失敗します）。本文は`--body`に直接シングルクォートで埋め込み、本文中の`'`は`'\''`に置き換えてください。
 
           claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(idb:*),Bash(xcrun:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh pr comment:*),Bash(gh issue comment:*)"'
 
@@ -213,10 +218,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SOURCE_COMMENT_URL: ${{ inputs.source_comment_url }}
           TARGET_TYPE: ${{ inputs.target_type }}
           TARGET_NUMBER: ${{ inputs.target_number }}
         run: |
-          BODY="claude-ios.yamlの実行が失敗し、iOS Simulatorでの確認を完了できませんでした。ログを確認してください: $RUN_URL"
+          BODY=$(printf '> 起動元コメントへの返信: %s\n\nclaude-ios.yamlの実行が失敗し、iOS Simulatorでの確認を完了できませんでした。ログを確認してください: %s' "$SOURCE_COMMENT_URL" "$RUN_URL")
           if [ "$TARGET_TYPE" = "pr" ]; then
             gh pr comment "$TARGET_NUMBER" --repo "${{ github.repository }}" --body "$BODY"
           else

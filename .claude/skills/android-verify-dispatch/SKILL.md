@@ -31,6 +31,7 @@ agentは以下の形式で応答する。
 - `head_ref`: 検証対象のブランチ名。**PRコメント/PRレビュー由来の依頼の場合、`claude.yml`の`actions/checkout`は既定でベースブランチをチェックアウトしており、`git branch --show-current`はPRのhead refと一致しないことがある。** 必ず`gh pr view <PR番号> --json headRefName -q .headRefName`で取得すること（`--allowedTools`に`Bash(gh pr view:*)`として許可済みの単独コマンド）。Issueコメント由来で、Claude自身がこの turn で新規ブランチを作成・pushした場合は、そのブランチ名（`git branch --show-current`の結果）をそのまま使ってよい
 - `original_request`: 依頼元のコメント本文（受け取った依頼テキストそのもの）
 - `judged_reason`: `android-verify-judge`agentが返した理由をそのまま使う
+- `source_comment_url`: 起動元となった依頼コメント（またはIssue）のパーマリンク。`claude.yml`の`Determine source comment URL`ステップが`$GITHUB_ENV`の`SOURCE_COMMENT_URL`に設定済みなので、`echo "$SOURCE_COMMENT_URL"`（単独の単純なコマンド）で取得する
 
 ## 3. claude-android.yamlを起動する — 単一のシンプルなコマンドとして実行する
 
@@ -43,11 +44,11 @@ agentは以下の形式で応答する。
 `workflow_dispatch`のinput文字列には長さの上限があるため、`original_request`（依頼元コメント本文）が数千文字を超えるような長大なものである場合は、そのまま全文を埋め込もうとせず、要点を数百字程度に要約してから渡すこと。要約してもなお長すぎる、あるいは要約では判断理由が失われてしまうと判断した場合は、無理に起動を試みず「依頼内容が長大なため`claude-android.yaml`への自動連携ができなかった」旨と要約を最終応答に含め、人間に手動でのworkflow_dispatch実行を促すこと。
 
 ```bash
-gh workflow run claude-android.yaml --ref develop -f target_type='pr' -f target_number='123' -f head_ref='feat/xxx' -f original_request='依頼元のコメント本文をここに直接埋め込む。
+gh workflow run claude-android.yaml --ref develop -f target_type='pr' -f target_number='123' -f head_ref='feat/xxx' -f source_comment_url='https://github.com/OWNER/REPO/issues/42#issuecomment-123456789' -f original_request='依頼元のコメント本文をここに直接埋め込む。
 複数行でもそのまま書ける。本文中にシングルクォートがあれば '\''のように置換する。' -f judged_reason='android-verify-judgeが返した理由をここに直接埋め込む。'
 ```
 
-`--ref`は常に`develop`（デフォルトブランチ）を指定する。`claude-android.yaml`自体がまだ存在しないPRブランチからでも確実に起動するためで、実際に検証したいブランチは`head_ref`で別途渡す。`target_type`/`target_number`/`head_ref`/`original_request`/`judged_reason`は実際の値に置き換えること。
+`--ref`は常に`develop`（デフォルトブランチ）を指定する。`claude-android.yaml`自体がまだ存在しないPRブランチからでも確実に起動するためで、実際に検証したいブランチは`head_ref`で別途渡す。`target_type`/`target_number`/`head_ref`/`source_comment_url`/`original_request`/`judged_reason`は実際の値に置き換えること。
 
 ## 4. 起動結果を最終応答に含める
 
@@ -55,15 +56,13 @@ gh workflow run claude-android.yaml --ref develop -f target_type='pr' -f target_
 
 ### 成功時
 
-`gh workflow run`が成功したら、最終応答の中に以下のような内容を含める（`claude-android.yaml`の完了を待たずにターンを終えてよい）。
+`gh workflow run`が成功したら、最終応答（依頼全体の完了状況チェックリストを含む）の中に、この確認作業を**未完了のチェックリスト項目**として含める（`claude-android.yaml`の完了を待たずにターンを終えてよい。CLAUDE.mdの「進行中のチェックリストを更新しただけで終えてはならない」規則の例外として、この項目に限りチェック無しのまま最終応答としてよい。これは別workflowへの引き継ぎであり、放置ではないため）。
 
 ```
-Android Emulatorでの確認が必要と判断したため、claude-android.yamlに検証を引き継ぎました。
-判断理由: <judged_reasonの要約>
-完了後、claude-android.yaml側から別途結果がコメントされます。
+- [ ] Android Emulatorでの動作確認（claude-android.yamlに引き継ぎ済み。判断理由: <judged_reasonの要約>。完了後、claude-android.yaml側から本コメントへの返信として結果が報告されます）
 ```
 
-iOS側（`ios-verify-judge`）の検証も同時に走っている場合は、その旨も明記する。
+iOS側（`ios-verify-judge`）の検証も同時に走っている場合は、その旨も明記する（例: 対応するiOS側のチェックリスト項目も並べる）。
 
 ### 失敗時
 

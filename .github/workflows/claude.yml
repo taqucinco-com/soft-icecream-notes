@@ -48,6 +48,23 @@ jobs:
               ;;
           esac
 
+      - name: Determine source comment URL
+        run: |
+          case "${{ github.event_name }}" in
+            issue_comment)
+              echo "SOURCE_COMMENT_URL=${{ github.event.comment.html_url }}" >> "$GITHUB_ENV"
+              ;;
+            pull_request_review_comment)
+              echo "SOURCE_COMMENT_URL=${{ github.event.comment.html_url }}" >> "$GITHUB_ENV"
+              ;;
+            pull_request_review)
+              echo "SOURCE_COMMENT_URL=${{ github.event.review.html_url }}" >> "$GITHUB_ENV"
+              ;;
+            issues)
+              echo "SOURCE_COMMENT_URL=${{ github.event.issue.html_url }}" >> "$GITHUB_ENV"
+              ;;
+          esac
+
       - name: Set up Flutter (from mobile/.fvmrc)
         id: flutter_setup
         uses: kuhnroyal/flutter-fvm-config-action@v3

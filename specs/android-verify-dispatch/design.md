@@ -72,7 +72,7 @@
 - 起動コマンド例:
 
   ```bash
-  gh workflow run claude-android.yaml --ref develop -f target_type='pr' -f target_number='123' -f head_ref='feat/xxx' -f original_request='...' -f judged_reason='...'
+  gh workflow run claude-android.yaml --ref develop -f target_type='pr' -f target_number='123' -f head_ref='feat/xxx' -f source_comment_url='https://github.com/OWNER/REPO/issues/42#issuecomment-123456789' -f original_request='...' -f judged_reason='...'
   ```
 
 ## 3. 既存agent`ios-verify-judge`の改修
@@ -89,7 +89,7 @@
 
 `claude-ios.yaml`と同じ構成。既存`claude.yml`の`if: steps.ui_verify.outputs.enabled == 'true'`が付いていたAndroid関連ステップ（`.env.local`生成、gh CLIアップグレード、JDK 17、KVM有効化、Android SDKセットアップ、Gradle cache、AVD cache、stale lock除去、Debug Keystoreデコード、Flutterセットアップ、Dart build_runner cache、`flutter pub get`+codegen、codegen変更の破棄、AVD作成・起動確認（reactivecircus）、エミュレータのバックグラウンド起動）を丸ごと移植する。
 
-- トリガー: `workflow_dispatch`のみ。`inputs`は`claude-ios.yaml`と同じ形（`target_type`, `target_number`, `head_ref`, `original_request`, `judged_reason`。base64エンコードは行わない）。
+- トリガー: `workflow_dispatch`のみ。`inputs`は`claude-ios.yaml`と同じ形（`target_type`, `target_number`, `head_ref`, `source_comment_url`, `original_request`, `judged_reason`。base64エンコードは行わない）。
 - `runs-on: ubuntu-latest`（既存のclaude.ymlのAndroid部分と同じ。iOSのmacosランナーよりコストが安い）。
 - `actions/checkout@v4`は`ref: ${{ inputs.head_ref }}`。
 - `anthropics/claude-code-action@v1`の`prompt`に`${{ inputs.original_request }}`/`${{ inputs.judged_reason }}`をそのまま埋め込み、`flutter-ui-verify-ci`skillを使うよう指示する。
@@ -102,6 +102,7 @@
 - 変更: `Set up Flutter (from mobile/.fvmrc)`、`Dart build_runner cache`、`Install Flutter dependencies and generate code`、`Discard codegen changes to tracked files`は`if`条件を外し、常時実行するステップとしてそのまま残す（要件2）。
 - `claude_args`の`--allowedTools`から`Bash(adb:*)`を削除する（このジョブではAndroidエミュレータを一切操作しないため不要）。`Bash(flutter:*)`/`Bash(dart:*)`は`flutter analyze`/`flutter test`等の静的解析用途で引き続き必要なため残す。`Bash(gh workflow run:*)`はAndroid/iOS両方のdispatchに共通で使えるため変更不要。
 - `permissions`（`actions: write`含む）は変更しない。
+- 追加: `Determine source comment URL`ステップ（`React with eyes`直後）。イベント種別（`issue_comment`/`pull_request_review_comment`/`pull_request_review`/`issues`）に応じて、起動元コメント（または`issues`イベントではIssue自体）のパーマリンクを`$GITHUB_ENV`の`SOURCE_COMMENT_URL`に設定する。`android-verify-dispatch`/`ios-verify-dispatch`skillはこれを`echo "$SOURCE_COMMENT_URL"`（単独の単純なコマンド）で読み取り、`source_comment_url`としてdispatchに含める（要件23）。
 
 ## 7. 新規agent: `ui-verify-judge`（スクリーンショット評価の判定専任）
 
@@ -139,6 +140,7 @@
 | `target_type` | string (`pr` \| `issue`) | 結果をコメントする先がPRかIssueか |
 | `target_number` | string | PR番号またはIssue番号 |
 | `head_ref` | string | チェックアウト対象のブランチ名 |
+| `source_comment_url` | string | 起動元となった依頼コメント（またはIssue）のパーマリンク。`claude.yml`の`Determine source comment URL`ステップが`$GITHUB_ENV`の`SOURCE_COMMENT_URL`に設定する。`claude-android.yaml`/`claude-ios.yaml`側は完了報告コメントの先頭に`> 起動元コメントへの返信: <このURL>`という引用行を入れ、GitHubのIssue/PRコメントに無いスレッド返信を代替表現する |
 | `original_request` | string | 依頼元コメント本文 |
 | `judged_reason` | string | `claude.yml`側で判断した理由 |
 
@@ -188,6 +190,9 @@
 | 20. 上限到達時のエスカレーション | コンポーネント8 |
 | 21. `ui-verify-judge`の判定専任性 | コンポーネント7 |
 | 22. エスカレーション時の理由明示 | コンポーネント8 |
+| 23. `source_comment_url`の入力への含め方 | コンポーネント6（`claude.yml`の`Determine source comment URL`ステップ）、データモデル |
+| 24. 引き継ぎ項目の未完了チェックリスト表現 | コンポーネント2 |
+| 25. 起動元コメントへの引用・リンクでの返信 | コンポーネント5（`claude-android.yaml`/`claude-ios.yaml`のprompt・失敗時コメント） |
 
 # 検討したが採用しなかった代替案・既知のリスク
 
