@@ -164,9 +164,9 @@ GestureDetector(
 - **シミュレータの状態汚れ**: `xcrun simctl erase <UDID>`で初期化できる（起動中なら`shutdown`してから）。アプリだけ入れ直したい場合は`xcrun simctl uninstall <UDID> com.taqucinco.softicecreamnotes.icecreamLog`。
 - **ビルドが通らない**: iOSはPods起因の失敗が多い。`cd mobile/ios && pod install`、それでも駄目なら`fvm flutter clean`を試す。
 
-## 7. 画面の評価（VLMによる構造的評価）
+## 7. 画面の評価とui-verify-judgeによるループ
 
-**評価の手順・チェックリスト・判定基準・結果の保存形式（Markdown + JSON）は`flutter-ui-verify`スキルと完全に共通なので、`.claude/skills/flutter-ui-verify/SKILL.md`の7節をそのまま参照して実施すること。** ここで重複して定義しない（片方だけ更新されて食い違うのを避けるため）。
+**評価とその後のループの手順・チェックリスト・判定基準・`ui-verify-judge`agentの呼び出し方・結果の保存形式（Markdown + JSON）は`flutter-ui-verify`スキルと完全に共通なので、`.claude/skills/flutter-ui-verify/SKILL.md`の7節をそのまま参照して実施すること。** ここで重複して定義しない（片方だけ更新されて食い違うのを避けるため）。`ui-verify-judge`agent自体もAndroid/iOS共通の1つを使う。
 
 参照する際、Android向けの記述は以下のように読み替える。
 
@@ -179,5 +179,5 @@ GestureDetector(
 要点だけ再掲すると:
 
 - 依頼文に「Figma」「ワイヤーフレーム」「デザイン通り」等の言及がある場合のみFigma MCPでリファレンスを取得して比較する（7-A）。言及が無ければFigmaは呼ばず、依頼文で示された期待に対する構造分析を行う（7-B）。
-- 「画面構成 / 要素の有無 / 配置・順序 / テキスト・ラベル内容 / 状態表現」の5観点を「一致 / 軽微な差異 / 不一致 / 該当なし」で判定し、総合判定を出す。
+- いずれの場合も7-Cで`ui-verify-judge`agentを呼び出し、「画面構成 / 要素の有無 / 配置・順序 / テキスト・ラベル内容 / 状態表現」の5観点の判定・総合判定に加えて`loop_verdict`（`pass`/`retry`/`fatal`）を得る。`retry`ならコードを修正して2節からやり直し（最大10回）、`fatal`なら直ちに中断して人間にエスカレーションする。
 - 結果は`.claude/screenshots/mobile/<name>-compare.md`と`<name>-compare.json`の両方に保存する。

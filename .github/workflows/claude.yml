@@ -20,16 +20,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: develop
-    env:
-      ANDROID_API_LEVEL: "34"
-      ANDROID_AVD_NAME: "ci_test"
-      ANDROID_AVD_TARGET: "google_apis"
     permissions:
       contents: write
       pull-requests: write
       issues: write
       id-token: write
-      actions: write # CI結果の読み取りに加え、iOS確認が必要な場合にclaude-ios.yamlをworkflow_dispatchで起動するために必要
+      actions: write # CI結果の読み取りに加え、Android/iOS確認が必要な場合にclaude-android.yaml/claude-ios.yamlをworkflow_dispatchで起動するために必要
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -52,77 +48,7 @@ jobs:
               ;;
           esac
 
-      - name: Determine if UI verification (Android emulator) is requested
-        id: ui_verify
-        run: echo "enabled=${{ contains(github.event.comment.body, '[ui-verify]') || contains(github.event.review.body, '[ui-verify]') || contains(github.event.issue.body, '[ui-verify]') }}" >> "$GITHUB_OUTPUT"
-
-      # mobile/.env.localはgitignore対象なので、--dart-define-from-fileで使う分をCI上で
-      # GitHub Actions Secretsから生成する（ローカル開発時に手元のmobile/.env.localを使うのと同じ形）。
-      # キーの一覧はmobile/.env.sampleが正なので、プレースホルダを置換する形で作る。
-      # Claudeがこのjob内でflutter build/runする際は cd mobile して --dart-define-from-file=.env.local を使う。
-      - name: Create mobile/.env.local from .env.sample
-        if: steps.ui_verify.outputs.enabled == 'true'
-        env:
-          GOOGLE_MAP_KEY_ANDROID: ${{ secrets.GOOGLE_MAP_KEY_ANDROID }}
-          GOOGLE_MAP_KEY_IOS: ${{ secrets.GOOGLE_MAP_KEY_IOS }}
-        run: |
-          sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|$GOOGLE_MAP_KEY_ANDROID|" \
-              -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|$GOOGLE_MAP_KEY_IOS|" \
-              mobile/.env.sample > mobile/.env.local
-
-      - name: Upgrade gh CLI for --attach support
-        if: steps.ui_verify.outputs.enabled == 'true'
-        run: |
-          GH_VERSION=$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"v([^"]+)".*/\1/')
-          curl -fsSL -o /tmp/gh.deb "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_amd64.deb"
-          sudo apt-get install -y /tmp/gh.deb
-          gh --version
-
-      - name: Set up JDK 17
-        if: steps.ui_verify.outputs.enabled == 'true'
-        uses: actions/setup-java@v4
-        with:
-          java-version: "17"
-          distribution: "temurin"
-
-      - name: Enable KVM
-        if: steps.ui_verify.outputs.enabled == 'true'
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      - name: Setup Android SDK
-        if: steps.ui_verify.outputs.enabled == 'true'
-        uses: android-actions/setup-android@v3
-
-      - name: Gradle cache
-        if: steps.ui_verify.outputs.enabled == 'true'
-        uses: gradle/actions/setup-gradle@v5
-        with:
-          cache-read-only: "false"
-
-      - name: AVD cache
-        if: steps.ui_verify.outputs.enabled == 'true'
-        uses: actions/cache@v4
-        id: avd-cache
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-            /usr/local/lib/android/sdk/system-images/android-${{ env.ANDROID_API_LEVEL }}
-          key: avd-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_AVD_TARGET }}
-
-      - name: Remove stale emulator lock files from cached AVD
-        if: steps.ui_verify.outputs.enabled == 'true'
-        run: find ~/.android/avd -name "*.lock" -print -exec rm -rf {} +
-
-      - name: Decode Debug Keystore
-        if: steps.ui_verify.outputs.enabled == 'true'
-        run: echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > mobile/android/ci-debug.keystore
-
       - name: Set up Flutter (from mobile/.fvmrc)
-        if: steps.ui_verify.outputs.enabled == 'true'
         id: flutter_setup
         uses: kuhnroyal/flutter-fvm-config-action@v3
         with:
@@ -131,7 +57,6 @@ jobs:
           cache: "true"
 
       - name: Dart build_runner cache
-        if: steps.ui_verify.outputs.enabled == 'true'
         uses: actions/cache@v4
         with:
           path: mobile/.dart_tool
@@ -140,35 +65,13 @@ jobs:
             dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-
 
       - name: Install Flutter dependencies and generate code
-        if: steps.ui_verify.outputs.enabled == 'true'
         working-directory: mobile
         run: |
           flutter pub get
           dart run build_runner build --delete-conflicting-outputs
 
       - name: Discard codegen changes to tracked files
-        if: steps.ui_verify.outputs.enabled == 'true'
         run: git checkout -- mobile/
-
-      - name: create and check booting AVD (via reactivecircus/android-emulator-runner)
-        if: steps.ui_verify.outputs.enabled == 'true'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: ${{ env.ANDROID_API_LEVEL }}
-          avd-name: ${{ env.ANDROID_AVD_NAME }}
-          force-avd-creation: false
-          target: ${{ env.ANDROID_AVD_TARGET }}
-          arch: "x86_64"
-          script: echo "AVD created and boot-verified by reactivecircus."
-
-      - name: Start Android emulator (background, without reactivecircus)
-        if: steps.ui_verify.outputs.enabled == 'true'
-        run: |
-          nohup "$ANDROID_HOME/emulator/emulator" -avd "$ANDROID_AVD_NAME" -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim > /tmp/emulator.log 2>&1 &
-          disown
-          # shellcheck disable=SC2016
-          "$ANDROID_HOME/platform-tools/adb" wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 3; done'
-          "$ANDROID_HOME/platform-tools/adb" devices
 
       - name: Run Claude Code
         id: claude
@@ -177,7 +80,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          # CI結果の読み取りに加え、iOS確認が必要な場合にclaude-ios.yamlをworkflow_dispatchで起動するためにwriteが必要
+          # CI結果の読み取りに加え、Android/iOS確認が必要な場合にclaude-android.yaml/claude-ios.yamlをworkflow_dispatchで起動するためにwriteが必要
           additional_permissions: |
             actions: write
 
@@ -189,38 +92,4 @@ jobs:
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(adb:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh workflow run:*)"'
-
-      - name: Upload UI verification screenshots
-        if: steps.ui_verify.outputs.enabled == 'true'
-        id: upload_screenshots
-        uses: actions/upload-artifact@v4
-        with:
-          name: ui-verify-screenshots-${{ github.run_id }}
-          path: work/screenshots/*.png
-          if-no-files-found: ignore
-          retention-days: 14
-
-      - name: Post screenshot artifact link
-        if: steps.ui_verify.outputs.enabled == 'true' && steps.upload_screenshots.outputs.artifact-url != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT_URL: ${{ steps.upload_screenshots.outputs.artifact-url }}
-        run: |
-          case "${{ github.event_name }}" in
-            issue_comment|issues)
-              gh issue comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
-              ;;
-            pull_request_review_comment|pull_request_review)
-              gh pr comment "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
-              ;;
-          esac
-
-      - name: Stop Android emulator
-        if: always() && steps.ui_verify.outputs.enabled == 'true'
-        run: |
-          "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 emu kill || true
-          for _ in $(seq 1 30); do
-            "$ANDROID_HOME/platform-tools/adb" devices 2>/dev/null | grep -q emulator-5554 || break
-            sleep 1
-          done
+          claude_args: '--allowedTools "Task,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh workflow run:*),Bash(gh pr view:*)"'

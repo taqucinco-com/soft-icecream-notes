@@ -1,6 +1,6 @@
 ---
 name: flutter-ui-verify-ci
-description: GitHub Actions CI上でicecream_log(mobile/)をAndroidエミュレータで起動する際の、CI環境向けのアプリ起動手順。`.github/workflows/claude.yml`で`[ui-verify]`が指定された`@claude`実行から使う。スクリーンショット取得・タップ座標の取得・Figma比較など起動後の検証手順は`flutter-ui-verify`スキルを参照する。
+description: GitHub Actions CI上でicecream_log(mobile/)をAndroidエミュレータで起動する際の、CI環境向けのアプリ起動手順。`.github/workflows/claude-android.yaml`（`claude.yml`から`android-verify-judge`agentの判定を経てworkflow_dispatchで起動される）から使う。スクリーンショット取得・タップ座標の取得・Figma比較など起動後の検証手順は`flutter-ui-verify`スキルを参照する。
 ---
 
 # Flutter UI検証（CI/GitHub Actions向けの起動手順）
@@ -9,7 +9,7 @@ description: GitHub Actions CI上でicecream_log(mobile/)をAndroidエミュレ�
 
 ## なぜ別スキルにしたか
 
-CIの`claude`ジョブ（`.github/workflows/claude.yml`）は非対話的なBash権限モデルで動いており、`nohup <cmd> > file 2>&1 &`のようなバックグラウンド化・出力リダイレクトを伴うコマンドは、`--allowedTools`にプレフィックスを追加しても権限拒否されやすい。作業ディレクトリ外へのリダイレクトはハードコードされたセキュリティ制限で拒否され、作業ディレクトリ内へのリダイレクトであっても複数行スクリプトとの組み合わせで拒否されることを実際に確認した。`flutter run`の代わりに、バックグラウンド化もリダイレクトも不要な単発コマンドの組み合わせでアプリを起動する。
+CIの`claude-android`ジョブ（`.github/workflows/claude-android.yaml`）は非対話的なBash権限モデルで動いており、`nohup <cmd> > file 2>&1 &`のようなバックグラウンド化・出力リダイレクトを伴うコマンドは、`--allowedTools`にプレフィックスを追加しても権限拒否されやすい。作業ディレクトリ外へのリダイレクトはハードコードされたセキュリティ制限で拒否され、作業ディレクトリ内へのリダイレクトであっても複数行スクリプトとの組み合わせで拒否されることを実際に確認した。`flutter run`の代わりに、バックグラウンド化もリダイレクトも不要な単発コマンドの組み合わせでアプリを起動する。
 
 ## 前提
 
@@ -23,7 +23,7 @@ CIの`claude`ジョブ（`.github/workflows/claude.yml`）は非対話的なBash
 cd mobile && flutter build apk --debug --dart-define-from-file=.env.local
 ```
 
-`.env.local`は`mobile/`直下（ローカルと同じ位置）。`claude.yml`の"Create mobile/.env.local from .env.sample"ステップが`mobile/.env.sample`から生成済みなので、このスキル側で作る必要はない。
+`.env.local`は`mobile/`直下（ローカルと同じ位置）。`claude-android.yaml`の"Create mobile/.env.local from .env.sample"ステップが`mobile/.env.sample`から生成済みなので、このスキル側で作る必要はない。
 
 ```bash
 cd mobile && adb -s emulator-5554 install -r build/app/outputs/flutter-apk/app-debug.apk
@@ -68,12 +68,12 @@ mkdir -p "$GITHUB_WORKSPACE/work/screenshots"
 adb -s emulator-5554 exec-out screencap -p > "$GITHUB_WORKSPACE/work/screenshots/<name>.png"
 ```
 
-`Run Claude Code`ステップの後続で、ワークフロー（`claude.yml`）側がこのディレクトリの`*.png`を自動でGitHub Actionsのartifactとしてアップロードし、そのダウンロードリンクをPR/Issueに別コメントで投稿する。Claude自身がコミットやアップロードを行う必要は無い。
+`Run Claude Code`ステップの後続で、ワークフロー（`claude-android.yaml`）側がこのディレクトリの`*.png`を自動でGitHub Actionsのartifactとしてアップロードし、そのダウンロードリンクをPR/Issueに別コメントで投稿する。Claude自身がコミットやアップロードを行う必要は無い。
 
 ## スクリーンショットの視覚的分析（VLMによる評価・JSON）
 
-目視確認・VLMによる構造的評価・JSON形式での記録は、`flutter-ui-verify`スキルの7節（画面の評価）の手順・チェックリスト・JSON形式（`criteria`配列、`overall_verdict`等）をそのまま使うこと。CI固有の差分はスクリーンショットの保存先パスのみ（`.claude/screenshots/<module>/`ではなく`work/screenshots/`を使う）。
+評価とその後のループは、`flutter-ui-verify`スキルの7節（画面の評価とui-verify-judgeによるループ）の手順・チェックリスト・`ui-verify-judge`agentの呼び出し方・JSON形式（`criteria`配列、`overall_verdict`、`loop_verdict`等）をそのまま使うこと。**CI固有の差分は保存先パスのみで、スクリーンショット画像だけでなく`<name>-compare.md`/`<name>-compare.json`（評価結果）も含めて、`.claude/screenshots/<module>/`ではなくすべて`work/screenshots/`に保存する**（`.claude/`配下への書き込みはCIのサンドボックスで拒否されるため）。
 
-7節の分岐もそのまま踏襲する。**依頼コメントで「Figma」「ワイヤーフレーム」等への明示的な言及があるときだけ7-A（Figmaとの構造的比較）を行い、言及が無いときは7-B（依頼内容に対する単純な構造分析）を行う。** 7-Bの場合、`figma_node_id`・`reference_image`は`null`にする。
+7節の分岐もそのまま踏襲する。**依頼コメントで「Figma」「ワイヤーフレーム」等への明示的な言及があるときだけ7-A（Figmaとの比較材料の用意）を行い、言及が無いときは7-B（依頼内容に対する単純な構造分析の材料の用意）を行う。** いずれの場合も7-Cで`ui-verify-judge`を呼び出し、`loop_verdict`（`pass`/`retry`/`fatal`）に応じてループする（最大10回）。**`retry`では、7-Cが指す「2節」ではなくこのskill自身の「アプリをビルド・インストール・起動する」節（本ページ）に戻ってビルド→インストール→起動をやり直す**（`nohup flutter run`によるホットリロードはCIでは使えない）。`fatal`では直ちに中断して人間にエスカレーションする。7-Bの場合、`figma_node_id`・`reference_image`は`null`にする。
 
 このJSONは`--body`の本文中にコードフェンス付きで埋め込む（`--attach`は画像/動画専用のため、JSONの添付には使えない）。
