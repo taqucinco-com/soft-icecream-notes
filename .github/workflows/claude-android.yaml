@@ -95,7 +95,9 @@ jobs:
           key: avd-${{ env.ANDROID_API_LEVEL }}-${{ env.ANDROID_AVD_TARGET }}
 
       - name: Remove stale emulator lock files from cached AVD
-        run: find ~/.android/avd -name "*.lock" -print -exec rm -rf {} +
+        run: |
+          mkdir -p ~/.android/avd
+          find ~/.android/avd -name "*.lock" -print -exec rm -rf {} +
 
       - name: Decode Debug Keystore
         run: echo "${{ secrets.CI_DEBUG_KEYSTORE_BASE64 }}" | base64 -d > mobile/android/ci-debug.keystore
