@@ -186,11 +186,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_URL: ${{ steps.upload_screenshots.outputs.artifact-url }}
+          TARGET_TYPE: ${{ inputs.target_type }}
+          TARGET_NUMBER: ${{ inputs.target_number }}
         run: |
-          if [ "${{ inputs.target_type }}" = "pr" ]; then
-            gh pr comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
+          if [ "$TARGET_TYPE" = "pr" ]; then
+            gh pr comment "$TARGET_NUMBER" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
           else
-            gh issue comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
+            gh issue comment "$TARGET_NUMBER" --repo "${{ github.repository }}" --body "[ui-verify] 検証スクリーンショット: $ARTIFACT_URL"
           fi
 
       - name: Notify failure if the run did not complete
@@ -198,12 +200,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          TARGET_TYPE: ${{ inputs.target_type }}
+          TARGET_NUMBER: ${{ inputs.target_number }}
         run: |
           BODY="claude-android.yamlの実行が失敗し、Android Emulatorでの確認を完了できませんでした。ログを確認してください: $RUN_URL"
-          if [ "${{ inputs.target_type }}" = "pr" ]; then
-            gh pr comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "$BODY"
+          if [ "$TARGET_TYPE" = "pr" ]; then
+            gh pr comment "$TARGET_NUMBER" --repo "${{ github.repository }}" --body "$BODY"
           else
-            gh issue comment "${{ inputs.target_number }}" --repo "${{ github.repository }}" --body "$BODY"
+            gh issue comment "$TARGET_NUMBER" --repo "${{ github.repository }}" --body "$BODY"
           fi
 
       - name: Stop Android emulator

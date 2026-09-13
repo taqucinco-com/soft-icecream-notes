@@ -72,8 +72,8 @@ adb -s emulator-5554 exec-out screencap -p > "$GITHUB_WORKSPACE/work/screenshots
 
 ## スクリーンショットの視覚的分析（VLMによる評価・JSON）
 
-評価とその後のループは、`flutter-ui-verify`スキルの7節（画面の評価とui-verify-judgeによるループ）の手順・チェックリスト・`ui-verify-judge`agentの呼び出し方・JSON形式（`criteria`配列、`overall_verdict`、`loop_verdict`等）をそのまま使うこと。CI固有の差分はスクリーンショットの保存先パスのみ（`.claude/screenshots/<module>/`ではなく`work/screenshots/`を使う）。
+評価とその後のループは、`flutter-ui-verify`スキルの7節（画面の評価とui-verify-judgeによるループ）の手順・チェックリスト・`ui-verify-judge`agentの呼び出し方・JSON形式（`criteria`配列、`overall_verdict`、`loop_verdict`等）をそのまま使うこと。**CI固有の差分は保存先パスのみで、スクリーンショット画像だけでなく`<name>-compare.md`/`<name>-compare.json`（評価結果）も含めて、`.claude/screenshots/<module>/`ではなくすべて`work/screenshots/`に保存する**（`.claude/`配下への書き込みはCIのサンドボックスで拒否されるため）。
 
-7節の分岐もそのまま踏襲する。**依頼コメントで「Figma」「ワイヤーフレーム」等への明示的な言及があるときだけ7-A（Figmaとの比較材料の用意）を行い、言及が無いときは7-B（依頼内容に対する単純な構造分析の材料の用意）を行う。** いずれの場合も7-Cで`ui-verify-judge`を呼び出し、`loop_verdict`（`pass`/`retry`/`fatal`）に応じてループする（最大10回。`retry`ではコードを修正して2節からやり直し、`fatal`では直ちに中断して人間にエスカレーションする）。7-Bの場合、`figma_node_id`・`reference_image`は`null`にする。
+7節の分岐もそのまま踏襲する。**依頼コメントで「Figma」「ワイヤーフレーム」等への明示的な言及があるときだけ7-A（Figmaとの比較材料の用意）を行い、言及が無いときは7-B（依頼内容に対する単純な構造分析の材料の用意）を行う。** いずれの場合も7-Cで`ui-verify-judge`を呼び出し、`loop_verdict`（`pass`/`retry`/`fatal`）に応じてループする（最大10回）。**`retry`では、7-Cが指す「2節」ではなくこのskill自身の「アプリをビルド・インストール・起動する」節（本ページ）に戻ってビルド→インストール→起動をやり直す**（`nohup flutter run`によるホットリロードはCIでは使えない）。`fatal`では直ちに中断して人間にエスカレーションする。7-Bの場合、`figma_node_id`・`reference_image`は`null`にする。
 
 このJSONは`--body`の本文中にコードフェンス付きで埋め込む（`--attach`は画像/動画専用のため、JSONの添付には使えない）。

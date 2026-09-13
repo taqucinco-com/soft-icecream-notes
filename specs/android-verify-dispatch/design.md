@@ -18,10 +18,10 @@
   android-verify-dispatch      ios-verify-dispatch
   skillの手順で                 skillの手順で
   gh workflow run               gh workflow run
-  claude-android.yml            claude-ios.yaml
+  claude-android.yaml            claude-ios.yaml
         │                           │
         ▼                           ▼
-  claude-android.yml            claude-ios.yaml
+  claude-android.yaml            claude-ios.yaml
   (ubuntu-latest, 新規)          (macos-26, 既存)
   ┌─────────────────────┐    ┌─────────────────────┐
   │ Android SDK/JDK/KVM/  │    │ iOS Simulator/       │
@@ -60,7 +60,7 @@
 
 - 入力に依頼元コメント本文と（把握していれば）`[ui-verify]`タグの有無を含める。
 - `[ui-verify]`タグがあり、かつ依頼内容からプラットフォームが特定できない場合は「必要: true」とする（コストの安いAndroidをデフォルトにするバイアス。要件8）。
-- 依頼内容が明示的にiOS固有（Cupertino、iOS限定の不具合等）であり、かつAndroidに无関係と判断できる場合は「必要: false」としてよい。
+- 依頼内容が明示的にiOS固有（Cupertino、iOS限定の不具合等）であり、かつAndroidに無関係と判断できる場合は「必要: false」としてよい。
 - 出力形式は`ios-verify-judge`と同じ（`必要: true/false/unknown` + 理由）。
 
 ## 2. 新規skill: `android-verify-dispatch`（起動用）
@@ -68,11 +68,11 @@
 `ios-verify-dispatch`skillとほぼ同一のロジック・同じ注意点（Issue #56の教訓：事前疎通確認をしない、単一の単純なコマンドとして実行する、base64を使わずシングルクォートで直接埋め込む）を踏襲する。差分は以下のみ。
 
 - 呼び出すagentが`android-verify-judge`。
-- 起動するワークフローが`claude-android.yml`。
+- 起動するワークフローが`claude-android.yaml`。
 - 起動コマンド例:
 
   ```bash
-  gh workflow run claude-android.yml --ref develop -f target_type='pr' -f target_number='123' -f head_ref='feat/xxx' -f original_request='...' -f judged_reason='...'
+  gh workflow run claude-android.yaml --ref develop -f target_type='pr' -f target_number='123' -f head_ref='feat/xxx' -f original_request='...' -f judged_reason='...'
   ```
 
 ## 3. 既存agent`ios-verify-judge`の改修
@@ -85,7 +85,7 @@
 
 - ロジック自体（agent呼び出し→`gh workflow run`→最終応答に含める）に変更は無い。「Android版と対称な構成になった」旨をコメントとして反映する程度の軽微な文言修正のみ。
 
-## 5. 新規ワークフロー: `.github/workflows/claude-android.yml`
+## 5. 新規ワークフロー: `.github/workflows/claude-android.yaml`
 
 `claude-ios.yaml`と同じ構成。既存`claude.yml`の`if: steps.ui_verify.outputs.enabled == 'true'`が付いていたAndroid関連ステップ（`.env.local`生成、gh CLIアップグレード、JDK 17、KVM有効化、Android SDKセットアップ、Gradle cache、AVD cache、stale lock除去、Debug Keystoreデコード、Flutterセットアップ、Dart build_runner cache、`flutter pub get`+codegen、codegen変更の破棄、AVD作成・起動確認（reactivecircus）、エミュレータのバックグラウンド起動）を丸ごと移植する。
 
@@ -98,7 +98,7 @@
 
 ## 6. `claude.yml`の変更点
 
-- 削除: `Determine if UI verification (Android emulator) is requested`（`ui_verify`ステップ）、`Create mobile/.env.local from .env.sample`、`Upgrade gh CLI for --attach support`、`Set up JDK 17`、`Enable KVM`、`Setup Android SDK`、`Gradle cache`、`AVD cache`、`Remove stale emulator lock files`、`Decode Debug Keystore`、`create and check booting AVD`、`Start Android emulator`、`Upload UI verification screenshots`、`Post screenshot artifact link`、`Stop Android emulator`。これらはすべて`claude-android.yml`に移植済み。
+- 削除: `Determine if UI verification (Android emulator) is requested`（`ui_verify`ステップ）、`Create mobile/.env.local from .env.sample`、`Upgrade gh CLI for --attach support`、`Set up JDK 17`、`Enable KVM`、`Setup Android SDK`、`Gradle cache`、`AVD cache`、`Remove stale emulator lock files`、`Decode Debug Keystore`、`create and check booting AVD`、`Start Android emulator`、`Upload UI verification screenshots`、`Post screenshot artifact link`、`Stop Android emulator`。これらはすべて`claude-android.yaml`に移植済み。
 - 変更: `Set up Flutter (from mobile/.fvmrc)`、`Dart build_runner cache`、`Install Flutter dependencies and generate code`、`Discard codegen changes to tracked files`は`if`条件を外し、常時実行するステップとしてそのまま残す（要件2）。
 - `claude_args`の`--allowedTools`から`Bash(adb:*)`を削除する（このジョブではAndroidエミュレータを一切操作しないため不要）。`Bash(flutter:*)`/`Bash(dart:*)`は`flutter analyze`/`flutter test`等の静的解析用途で引き続き必要なため残す。`Bash(gh workflow run:*)`はAndroid/iOS両方のdispatchに共通で使えるため変更不要。
 - `permissions`（`actions: write`含む）は変更しない。
@@ -130,7 +130,7 @@
 
 # データモデル・API/インターフェース
 
-## `claude-android.yml`の`workflow_dispatch.inputs`
+## `claude-android.yaml`の`workflow_dispatch.inputs`
 
 `claude-ios.yaml`と同一の形（Issue #56の教訓を反映済み、base64無し）。
 
@@ -175,10 +175,10 @@
 | 7. 起動失敗時の最終応答 | コンポーネント2 |
 | 8. `[ui-verify]`単体でのAndroidデフォルト | コンポーネント1 |
 | 9. iOS固有時の`ios-verify-judge`判定 | コンポーネント3 |
-| 10. `claude-android.yml`のセットアップ範囲 | コンポーネント5 |
+| 10. `claude-android.yaml`のセットアップ範囲 | コンポーネント5 |
 | 11. `flutter-ui-verify-ci`の利用 | コンポーネント5、コンポーネント8 |
 | 12. 修正・再ビルドループの権限 | コンポーネント5（`--allowedTools`） |
-| 13. `claude-android.yml`完了時の最終応答 | コンポーネント5 |
+| 13. `claude-android.yaml`完了時の最終応答 | コンポーネント5 |
 | 14. artifactアップロード | コンポーネント5 |
 | 15. Issue #56の教訓の適用 | コンポーネント2 |
 | 16. `ui-verify-judge`の呼び出し | コンポーネント7・8 |
@@ -203,4 +203,4 @@
 - **`fatal`判定の主観性**: 「コードの修正だけでは解決しない問題」等の判断はagentの意味的判断に委ねられ、判断がぶれる可能性がある。判断基準の例示を継続的に調整する運用が前提になる。
 - **10回ループの実行時間**: 1回のビルド（特にiOS）は数十秒〜数分かかるため、10回近くまでループするとジョブの`timeout-minutes`を超過する可能性がある。実装時に既存のtimeout値で十分かを確認する必要がある。
 - **`[ui-verify]`タグの意味変更による既存運用への影響**: これまで`[ui-verify]`はAndroidのみをトリガーしていたが、今後はコストバイアス次第でiOS側の判定にも間接的に影響しうる（明示的にiOS固有と判断できない限りtrueにしないため実際の挙動は変わらない想定だが、判断基準の文言変更なので注意深くレビューする）。
-- **Issue #56と同種の権限問題の再発**: `claude-android.yml`も`claude-ios.yaml`と同じBash権限モデルの制約を受けるため、`android-verify-dispatch`skill・`claude-android.yml`双方で同じ注意点（単一コマンド・事前疎通確認禁止）を確実に踏襲する必要がある。
+- **Issue #56と同種の権限問題の再発**: `claude-android.yaml`も`claude-ios.yaml`と同じBash権限モデルの制約を受けるため、`android-verify-dispatch`skill・`claude-android.yaml`双方で同じ注意点（単一コマンド・事前疎通確認禁止）を確実に踏襲する必要がある。
