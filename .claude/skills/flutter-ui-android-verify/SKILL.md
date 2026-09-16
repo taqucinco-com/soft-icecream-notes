@@ -52,7 +52,7 @@ Figmaは呼び出さず、実機のスクリーンショットと`uiautomator du
 3. 応答のJSON中の`fatal`でまず分岐する。**`pass`/`retry`という二値の「ループ制御判定」は`ui-checker`自体は返さない**（`mobile-screen-vision-compare`の比較結果である`criteria`と、環境・仕様レベルの`fatal`判定だけがagentの責務であり、そこから先の「ループを続けるか」はイテレーションカウンタという状態を持つ呼び出し元＝このskill自身の責務のため）。
    - **`fatal: true`**: 直ちにループを中断する。それ以上コードの修正・再ビルドを試みず、`fatal_reason`と直近の`criteria`をそのまま依頼者への報告（人間へのエスカレーション）に含める。
    - **`fatal: false`**: `criteria`に`mismatch`の観点が1件でもあるかを確認する（この判定は呼び出し元が`criteria`から直接行い、agentの追加出力には頼らない）。
-     - **`mismatch`が0件**: 検証完了。下記「評価結果の保存」に進んでループを正常終了する。
+     - **`mismatch`が0件**: 検証完了。`loop_verdict: pass`として下記「評価結果の保存」に進んでループを正常終了する。
      - **`mismatch`が1件以上かつイテレーションカウンタ < 10**: `criteria`の`mismatch`指摘をもとにコードを修正し、**検証対象のプラットフォーム・環境に応じた操作skillのアプリビルド・起動手順に従ってやり直し**、スクリーンショットを撮り直す（Androidローカルは`flutter-android-operate`2節「アプリをビルド・起動する」、Android CIは`flutter-android-operate-ci`「アプリをビルド・インストール・起動する」節、iOSローカルは`flutter-ios-operate`2節、iOS CIは`flutter-ios-operate-ci`「アプリをビルド・インストール・起動する」節。それぞれのCI/ローカルの制約に従うこと。**`nohup flutter run`を使ってよいのはローカル版だけ**で、CI版はビルド→インストール→起動のコマンド列を使う）。カウンタを+1して7-Cの2.（`ui-checker`の呼び出し）に戻る。
      - **`mismatch`が1件以上かつイテレーションカウンタ = 10**: それ以上ループしない。上限到達を理由に、直近の`criteria`を添えて依頼者へエスカレーションする。
 
@@ -60,77 +60,4 @@ Figmaは呼び出さず、実機のスクリーンショットと`uiautomator du
 
 ### 評価結果の保存（Markdown + JSON）
 
-ループが終了した時点の`ui-checker`の最終応答（JSON。`criteria`/`overall_verdict`/`fatal`/`fatal_reason`を含む）に、`compared_at`（ISO8601日時）・`reference_image`（7-Bでは`null`）・`implementation_image`・`loop_iterations`と、**呼び出し元が7-Cで導出したこのループの最終結果**を表す`loop_verdict`（`pass` / `retry_limit_reached` / `fatal`）を追加した上で、人間が読むMarkdownと、後で複数回分をスクリプト集計できるJSONの両方を、同じ内容で`.claude/screenshots/<module>/`に保存する。ファイル名は画面名を揃え、拡張子だけ変える（`<name>-compare.md` / `<name>-compare.json`）。`fatal: true`または上限到達（イテレーションカウンタ=10）でループを終えた場合も、その時点までに判明していた`criteria`を同様に保存する（`loop_verdict`はそれぞれ`fatal`/`retry_limit_reached`にする）。
-
-判定語とJSON側の値の対応:
-
-| 表記（Markdown） | JSON値 |
-|---|---|
-| 一致 | `match` |
-| 軽微な差異 | `minor_diff` |
-| 不一致 | `mismatch` |
-| 該当なし | `not_applicable` |
-
-総合判定の対応:
-
-| 表記（Markdown） | JSON値 |
-|---|---|
-| 完全一致 | `exact_match` |
-| ほぼ一致 | `close_match` |
-| 部分一致 | `partial_match` |
-| 大きく乖離 | `major_divergence` |
-
-**Markdown（`<name>-compare.md`）**
-
-```markdown
-# <画面名> ワイヤーフレーム比較
-
-- Figma node-id: <id>
-- 比較日時: <date>
-- リファレンス: `<name>-figma.png` / 実装: `<name>-app.png`
-- ループ回数: <イテレーションカウンタの最終値>
-
-## チェックリスト
-
-| 観点 | 判定 | 差分 |
-|---|---|---|
-| 画面構成 | 一致 | - |
-| 要素の有無 | 軽微な差異 | ○○ボタンが未実装 |
-| 配置・順序 | 一致 | - |
-| テキスト/ラベル内容 | 一致 | - |
-| 状態表現 | 該当なし | - |
-
-## 総合判定
-
-ほぼ一致
-```
-
-**JSON（`<name>-compare.json`）**
-
-`diff`は差分説明の自由記述（日本語）、それ以外のキー・値は英語のenumで機械可読にする。7-B（Figmaに言及が無い場合）では`figma_node_id`・`reference_image`を`null`にする。
-
-```json
-{
-  "screen": "<画面名>",
-  "figma_node_id": "<id、7-Bではnull>",
-  "compared_at": "<ISO8601日時>",
-  "reference_image": "<name>-figma.png（7-Bではnull）",
-  "implementation_image": "<name>-app.png",
-  "criteria": [
-    { "aspect": "layout_structure", "verdict": "match", "diff": null },
-    { "aspect": "element_presence", "verdict": "minor_diff", "diff": "○○ボタンが未実装" },
-    { "aspect": "arrangement_order", "verdict": "match", "diff": null },
-    { "aspect": "text_labels", "verdict": "match", "diff": null },
-    { "aspect": "state_representation", "verdict": "not_applicable", "diff": null }
-  ],
-  "overall_verdict": "close_match",
-  "fatal": false,
-  "fatal_reason": null,
-  "loop_verdict": "pass",
-  "loop_iterations": 1
-}
-```
-
-`fatal`/`fatal_reason`は`ui-checker`の応答をそのまま転記する。`loop_verdict`はそれとは別に、呼び出し元がこのループ全体の結末（正常終了/上限到達/エスカレーション）を表すために付与する値である点に注意する（`ui-checker`自体は`pass`/`retry`という値を返さない）。
-
-同じ画面を複数回検証する場合は上書きせず`<name>-compare-<timestamp>.json`のように連番/日時を付けて残し、`jq`等で時系列に読み込めば「実装が近づいているか」を追跡できる。
+保存の手順・フォーマット（Markdown/JSONの形式、`loop_verdict`の3値等）は`flutter-ui-android-verify`/`flutter-ui-android-verify-ci`/`flutter-ui-ios-verify`/`flutter-ui-ios-verify-ci`の4スキル共通なので`flutter-ui-verify-result-save`スキル（`.claude/skills/flutter-ui-verify-result-save/SKILL.md`）を使う（重複して定義しない）。保存先ディレクトリは`flutter-android-operate`skillの指示（`.claude/screenshots/<module>/`）に従う。上限到達（`loop_verdict: retry_limit_reached`）または`fatal`（`loop_verdict: fatal`）でループを終えた場合も、その時点までに判明していた`criteria`を同様に保存する。

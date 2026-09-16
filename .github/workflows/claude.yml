@@ -103,6 +103,9 @@ jobs:
           # or https://code.claude.com/docs/en/cli-reference for available options
           claude_args: >-
             --allowedTools "Task,
+            Read,
+            Edit,
+            Write,
             WebFetch,
             Bash(git branch:*),
             Bash(git checkout:*),

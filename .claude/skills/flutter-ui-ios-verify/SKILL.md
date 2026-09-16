@@ -17,7 +17,7 @@ description: ローカル開発環境でiOSシミュレータ上のicecream_log(
 
 ## 画面の評価とui-checkerによるループ
 
-**評価とその後のループの手順・チェックリスト・判定基準・`ui-checker`agentの呼び出し方・結果の保存形式（Markdown + JSON）は`flutter-ui-android-verify`スキルと完全に共通なので、`.claude/skills/flutter-ui-android-verify/SKILL.md`の「画面の評価とui-checkerによるループ」節をそのまま参照して実施すること。** ここで重複して定義しない（片方だけ更新されて食い違うのを避けるため）。`ui-checker`agent自体もAndroid/iOS共通の1つを使う。
+**評価とその後のループの手順・チェックリスト・判定基準・`ui-checker`agentの呼び出し方は`flutter-ui-android-verify`スキルと完全に共通なので、`.claude/skills/flutter-ui-android-verify/SKILL.md`の「画面の評価とui-checkerによるループ」節をそのまま参照して実施すること。** ここで重複して定義しない（片方だけ更新されて食い違うのを避けるため）。結果の保存形式（Markdown + JSON）は`flutter-ui-verify-result-save`スキルを使う（Android/iOS・ローカル/CI共通）。`ui-checker`agent自体もAndroid/iOS共通の1つを使う。
 
 参照する際、Android向けの記述は以下のように読み替える。
 

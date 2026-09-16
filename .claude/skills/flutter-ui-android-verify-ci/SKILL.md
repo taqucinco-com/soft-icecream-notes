@@ -14,7 +14,7 @@ description: GitHub Actions CI上でAndroidエミュレータ上のicecream_log(
 
 ## スクリーンショットの視覚的分析（VLMによる評価・JSON）
 
-評価とその後のループは、`flutter-ui-android-verify`スキルの「画面の評価とui-checkerによるループ」節の手順・チェックリスト・`ui-checker`agentの呼び出し方・JSON形式（`criteria`配列、`overall_verdict`、`fatal`/`fatal_reason`等）をそのまま使うこと。**CI固有の差分は保存先パスのみで、スクリーンショット画像だけでなく`<name>-compare.md`/`<name>-compare.json`（評価結果）も含めて、`.claude/screenshots/<module>/`ではなくすべて`work/screenshots/`に保存する**（`.claude/`配下への書き込みはCIのサンドボックスで拒否されるため）。
+評価とその後のループは、`flutter-ui-android-verify`スキルの「画面の評価とui-checkerによるループ」節の手順・チェックリスト・`ui-checker`agentの呼び出し方をそのまま使うこと。結果の保存形式（Markdown + JSON）は`flutter-ui-verify-result-save`スキルを使う（`flutter-ui-android-verify`と共通）。**CI固有の差分は保存先パスのみで、スクリーンショット画像だけでなく`<name>-compare.md`/`<name>-compare.json`（評価結果）も含めて、`.claude/screenshots/<module>/`ではなくすべて`work/screenshots/`に保存する**（`.claude/`配下への書き込みはCIのサンドボックスで拒否されるため）。
 
 7-A/7-B/7-Cの分岐もそのまま踏襲する。**依頼コメントで「Figma」「ワイヤーフレーム」等への明示的な言及があるときだけ7-A（Figmaとの比較材料の用意）を行い、言及が無いときは7-B（依頼内容に対する単純な構造分析の材料の用意）を行う。** いずれの場合も7-Cで`ui-checker`を呼び出し、`fatal`でまず分岐し、`fatal: false`なら`criteria`のmismatch有無から呼び出し元自身がretry相当/pass相当を判定してループする（最大10回。`ui-checker`自体は`pass`/`retry`という値を返さない）。**retry相当では、7-Cが指す「Androidローカルの操作skill」ではなく`flutter-android-operate-ci`skillの「アプリをビルド・インストール・起動する」節に戻ってビルド→インストール→起動をやり直す**（`nohup flutter run`によるホットリロードはCIでは使えない）。`fatal: true`では直ちに中断して人間にエスカレーションする。7-Bの場合、`figma_node_id`・`reference_image`は`null`にする。
 

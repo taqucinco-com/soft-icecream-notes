@@ -180,6 +180,9 @@ jobs:
 
           claude_args: >-
             --allowedTools "Task,
+            Read,
+            Edit,
+            Write,
             Bash(git branch:*),
             Bash(git checkout:*),
             Bash(git switch:*),
