@@ -4,16 +4,16 @@
 
 ## Android要否判定・起動
 
-- [x] 1. 新規agent `.claude/agents/android-verify-judge.md` を作成する（`ios-verify-judge`と同じtools構成・出力形式。`[ui-verify]`タグとプラットフォーム不明時のAndroidデフォルトを判断基準に含める）
+- [x] 1. 新規agent `.claude/agents/android-pr-emu-need-checker.md` を作成する（`ios-pr-sim-need-checker`と同じtools構成・出力形式。`[ui-verify]`タグとプラットフォーム不明時のAndroidデフォルトを判断基準に含める）
   - 対応: requirements.md #1, #8 / design.md コンポーネント1
 
-- [x] 2. 新規skill `.claude/skills/android-verify-dispatch/SKILL.md` を作成する（`ios-verify-dispatch`と同じ構成・Issue #56の教訓を踏襲。呼び出しagentと起動先ワークフローのみAndroid向けに差し替え）
+- [x] 2. 新規skill `.claude/skills/android-emu-verify-dispatch/SKILL.md` を作成する（`ios-sim-verify-dispatch`と同じ構成・Issue #56の教訓を踏襲。呼び出しagentと起動先ワークフローのみAndroid向けに差し替え）
   - 対応: requirements.md #4, #5, #6, #7, #15 / design.md コンポーネント2
 
-- [x] 3. 既存agent `.claude/agents/ios-verify-judge.md` を改修する（`[ui-verify]`タグをプラットフォーム不問の汎用シグナルとして扱い、プラットフォーム不明時はAndroidをデフォルトとしてiOS側はtrueにしないというコストバイアスを明記する）
+- [x] 3. 既存agent `.claude/agents/ios-pr-sim-need-checker.md` を改修する（`[ui-verify]`タグをプラットフォーム不問の汎用シグナルとして扱い、プラットフォーム不明時はAndroidをデフォルトとしてiOS側はtrueにしないというコストバイアスを明記する）
   - 対応: requirements.md #8, #9 / design.md コンポーネント3
 
-- [x] 4. 既存skill `.claude/skills/ios-verify-dispatch/SKILL.md` の判断基準に関する説明文を、Android版が対称に存在することが分かるよう軽微に更新する
+- [x] 4. 既存skill `.claude/skills/ios-sim-verify-dispatch/SKILL.md` の判断基準に関する説明文を、Android版が対称に存在することが分かるよう軽微に更新する
   - 対応: design.md コンポーネント4
 
 ## claude-android.yaml（新規ワークフロー）
@@ -33,7 +33,7 @@
 - [x] 9. `claude-android.yaml`にAVD作成・起動確認（reactivecircus/android-emulator-runner）とエミュレータのバックグラウンド起動のステップを追加する（既存`claude.yml`の該当ステップを移植）
   - 対応: requirements.md #10 / design.md コンポーネント5
 
-- [x] 10. `claude-android.yaml`に`anthropics/claude-code-action@v1`実行ステップを追加する。`${{ inputs.original_request }}`/`${{ inputs.judged_reason }}`をプロンプトに埋め込み、`flutter-ui-verify-ci`skillを使うよう指示し、Issue #56の教訓（単一コマンド・事前疎通確認禁止）を明記する。`--allowedTools`に`adb`/`flutter`/`dart`/`git commit`/`git push`/`gh pr comment`/`gh issue comment`等を許可する
+- [x] 10. `claude-android.yaml`に`anthropics/claude-code-action@v1`実行ステップを追加する。`${{ inputs.original_request }}`/`${{ inputs.judged_reason }}`をプロンプトに埋め込み、`flutter-ui-android-verify-ci`skillを使うよう指示し、Issue #56の教訓（単一コマンド・事前疎通確認禁止）を明記する。`--allowedTools`に`adb`/`flutter`/`dart`/`git commit`/`git push`/`gh pr comment`/`gh issue comment`等を許可する
   - 対応: requirements.md #11, #12, #15 / design.md コンポーネント5
 
 - [x] 11. `claude-android.yaml`にスクリーンショットのartifactアップロード、成功時のリンクコメント、失敗時のエスカレーションコメントのステップを追加する（`claude-ios.yaml`と同じパターン）
@@ -50,21 +50,21 @@
 - [x] 14. `claude.yml`の`claude_args`の`--allowedTools`から`Bash(adb:*)`を削除する
   - 対応: design.md コンポーネント6
 
-## UI検証ループ（ui-verify-judge）
+## UI検証ループ（ui-checker）
 
-- [x] 15. 新規agent `.claude/agents/ui-verify-judge.md` を作成する（`tools: Read`のみ。Android/iOS共通、`flutter-ui-verify`skill7節のチェックリスト・判定基準を移植し、`loop_verdict`(`pass`/`retry`/`fatal`)と`fatal_reason`を出力形式に追加する）
+- [x] 15. 新規agent `.claude/agents/ui-checker.md` を作成する（`tools: Read`のみ。Android/iOS共通、`flutter-ui-android-verify`skill7節のチェックリスト・判定基準を移植し、`loop_verdict`(`pass`/`retry`/`fatal`)と`fatal_reason`を出力形式に追加する）
   - 対応: requirements.md #16, #18, #21 / design.md コンポーネント7
 
-- [x] 16. `.claude/skills/flutter-ui-verify/SKILL.md`の7節を改修する。`ui-verify-judge`agentの呼び出し、`pass`/`retry`/`fatal`による分岐、イテレーションカウンタ（最大10回）によるループ制御を追加する（既存のチェックリスト・JSON形式は維持しつつ`loop_verdict`/`fatal_reason`を追加）
+- [x] 16. `.claude/skills/flutter-ui-android-verify/SKILL.md`の7節を改修する。`ui-checker`agentの呼び出し、`pass`/`retry`/`fatal`による分岐、イテレーションカウンタ（最大10回）によるループ制御を追加する（既存のチェックリスト・JSON形式は維持しつつ`loop_verdict`/`fatal_reason`を追加）
   - 対応: requirements.md #17, #19, #20, #22 / design.md コンポーネント8
 
-- [x] 17. `.claude/skills/flutter-ui-verify-ci/SKILL.md`の7節への参照部分を、改修後の`flutter-ui-verify`7節（ループ導入後）を指すように確認・更新する
+- [x] 17. `.claude/skills/flutter-ui-android-verify-ci/SKILL.md`の7節への参照部分を、改修後の`flutter-ui-android-verify`7節（ループ導入後）を指すように確認・更新する
   - 対応: requirements.md #11, #16〜22 / design.md コンポーネント8
 
-- [x] 18. `.claude/skills/flutter-ui-ios-verify/SKILL.md`の7節への参照部分を、改修後の`flutter-ui-verify`7節を指すように確認・更新する
+- [x] 18. `.claude/skills/flutter-ui-ios-verify/SKILL.md`の7節への参照部分を、改修後の`flutter-ui-android-verify`7節を指すように確認・更新する
   - 対応: requirements.md #16〜22 / design.md コンポーネント8
 
-- [x] 19. `.claude/skills/flutter-ui-ios-verify-ci/SKILL.md`の7節への参照部分を、改修後の`flutter-ui-verify`7節を指すように確認・更新する
+- [x] 19. `.claude/skills/flutter-ui-ios-verify-ci/SKILL.md`の7節への参照部分を、改修後の`flutter-ui-android-verify`7節を指すように確認・更新する
   - 対応: requirements.md #16〜22 / design.md コンポーネント8
 
 ## 仕上げ
