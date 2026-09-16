@@ -1,15 +1,15 @@
 ---
-name: android-verify-dispatch
-description: GitHub Actionsの`@claude`実行(`.github/workflows/claude.yml`)で、`android-verify-judge`agentの判定結果に基づき、必要な場合に`.github/workflows/claude-android.yaml`をworkflow_dispatchで起動する手順。CLAUDE.mdの「GitHub Actions（@claudeメンション）での応答ルール」から参照される。
+name: android-emu-verify-dispatch
+description: GitHub Actionsの`@claude`実行(`.github/workflows/claude.yml`)で、`android-pr-emu-need-checker`agentの判定結果に基づき、必要な場合に`.github/workflows/claude-android.yaml`をworkflow_dispatchで起動する手順。CLAUDE.mdの「GitHub Actions（@claudeメンション）での応答ルール」から参照される。
 ---
 
 # Android Emulator確認要否の判定とclaude-android.yamlへの引き継ぎ
 
-`claude.yml`のジョブ内で、`android-verify-judge`agentを呼び出してAndroid Emulatorでの確認要否を判定させ、必要であれば`claude-android.yaml`を起動するための手順。**判定基準そのものは`android-verify-judge`agent側の責務であり、このskillでは扱わない。**`ios-verify-dispatch`skillとほぼ同一のロジックで、呼び出すagentと起動先ワークフローだけがAndroid向けになる。
+`claude.yml`のジョブ内で、`android-pr-emu-need-checker`agentを呼び出してAndroid Emulatorでの確認要否を判定させ、必要であれば`claude-android.yaml`を起動するための手順。**判定基準そのものは`android-pr-emu-need-checker`agent側の責務であり、このskillでは扱わない。**`ios-sim-verify-dispatch`skillとほぼ同一のロジックで、呼び出すagentと起動先ワークフローだけがAndroid向けになる。
 
-## 1. `android-verify-judge`agentを呼び出す
+## 1. `android-pr-emu-need-checker`agentを呼び出す
 
-`Task`ツールで`subagent_type: android-verify-judge`を**同期的に（`run_in_background: false`を指定して）**呼び出し、依頼元のコメント本文をそのまま渡す。必要であれば、対象のPR/Issueで何が変更されたかの要約も添えてよい。**バックグラウンド（非同期）呼び出しは使わないこと。** GitHub Actionsの非対話的なCIセッションには後続ターンが無く、非同期呼び出しの完了通知を受け取れないため、判定結果を使えないままターンが終わってしまう。
+`Agent`ツールで`subagent_type: android-pr-emu-need-checker`を**同期的に（`run_in_background: false`を指定して）**呼び出し、依頼元のコメント本文をそのまま渡す。必要であれば、対象のPR/Issueで何が変更されたかの要約も添えてよい。**バックグラウンド（非同期）呼び出しは使わないこと。** GitHub Actionsの非対話的なCIセッションには後続ターンが無く、非同期呼び出しの完了通知を受け取れないため、判定結果を使えないままターンが終わってしまう。
 
 agentは以下の形式で応答する。
 
@@ -18,7 +18,7 @@ agentは以下の形式で応答する。
 理由: <判断の根拠>
 ```
 
-- `false`の場合は何もせず、通常の対応を続ける（iOS側の検証は、`ios-verify-judge`の判定に従いこれまで通り独立に実行される）。
+- `false`の場合は何もせず、通常の対応を続ける（iOS側の検証は、`ios-pr-sim-need-checker`の判定に従いこれまで通り独立に実行される）。
 - `unknown`の場合は、推測で起動判断をせず、依頼者に確認するコメントを残す（CLAUDE.mdの「要件・設計上の曖昧な点は推測で埋めない」方針に準じる）。
 - `true`の場合は2.に進む。
 
@@ -29,7 +29,7 @@ agentは以下の形式で応答する。
 - `target_type`/`target_number`: 最初のプロンプトに「対象種別: pr/issue」「対象番号: ...」として直接渡されているので、それをそのまま使う（推測やコマンドでの再取得は不要）
 - `head_ref`: 検証対象のブランチ名。**PRコメント/PRレビュー由来の依頼の場合、`claude.yml`の`actions/checkout`は既定でベースブランチをチェックアウトしており、`git branch --show-current`はPRのhead refと一致しないことがある。** 必ず`gh pr view <PR番号> --json headRefName -q .headRefName`で取得すること（`--allowedTools`に`Bash(gh pr view:*)`として許可済みの単独コマンド）。Issueコメント由来で、Claude自身がこの turn で新規ブランチを作成・pushした場合は、そのブランチ名（`git branch --show-current`の結果）をそのまま使ってよい
 - `original_request`: 依頼元のコメント本文。最初のプロンプトの「起動元コメント本文:」以下にそのまま渡されているので、それを使う
-- `judged_reason`: `android-verify-judge`agentが返した理由をそのまま使う
+- `judged_reason`: `android-pr-emu-need-checker`agentが返した理由をそのまま使う
 - `source_comment_url`: 起動元となった依頼コメント（またはIssue）のパーマリンク。この値は最初のプロンプト冒頭に「起動元コメントURL: ...」として直接渡されているので、それをそのまま使う。**`echo`/`printenv`/`env`等のBashコマンドで改めて取得しようとしないこと。** シェル変数展開（`$VAR`）を含むコマンドは、`Bash(echo:*)`等でコマンド自体が許可されていても「Contains simple_expansion」として承認待ちになり、非対話的なCI実行では失敗する（実際にIssue #68で発生した事故）。プロンプトに書かれている値を読んで使うだけでよい
 
 ## 3. claude-android.yamlを起動する — 単一のシンプルなコマンドとして実行する
@@ -44,7 +44,7 @@ agentは以下の形式で応答する。
 
 ```bash
 gh workflow run claude-android.yaml --ref develop -f target_type='pr' -f target_number='123' -f head_ref='feat/xxx' -f source_comment_url='https://github.com/OWNER/REPO/issues/42#issuecomment-123456789' -f original_request='依頼元のコメント本文をここに直接埋め込む。
-複数行でもそのまま書ける。本文中にシングルクォートがあれば '\''のように置換する。' -f judged_reason='android-verify-judgeが返した理由をここに直接埋め込む。'
+複数行でもそのまま書ける。本文中にシングルクォートがあれば '\''のように置換する。' -f judged_reason='android-pr-emu-need-checkerが返した理由をここに直接埋め込む。'
 ```
 
 `--ref`は常に`develop`（デフォルトブランチ）を指定する。`claude-android.yaml`自体がまだ存在しないPRブランチからでも確実に起動するためで、実際に検証したいブランチは`head_ref`で別途渡す。`target_type`/`target_number`/`head_ref`/`source_comment_url`/`original_request`/`judged_reason`は実際の値に置き換えること。
@@ -61,7 +61,7 @@ gh workflow run claude-android.yaml --ref develop -f target_type='pr' -f target_
 - [ ] Android Emulatorでの動作確認（claude-android.yamlに引き継ぎ済み。判断理由: <judged_reasonの要約>。完了後、claude-android.yaml側から本コメントへの返信として結果が報告されます）
 ```
 
-iOS側（`ios-verify-judge`）の検証も同時に走っている場合は、その旨も明記する（例: 対応するiOS側のチェックリスト項目も並べる）。
+iOS側（`ios-pr-sim-need-checker`）の検証も同時に走っている場合は、その旨も明記する（例: 対応するiOS側のチェックリスト項目も並べる）。
 
 ### 失敗時
 

@@ -18,15 +18,17 @@
 - 要件・設計上の曖昧な点は推測で埋めず、必ずユーザーに確認する。
 - `specs/` 以下の仕様書はコードと同様にレビュー・コミット対象として扱う。
 - 実装フェーズでは一度に1タスクのみ着手し、完了ごとに `tasks.md` を更新する。
+- 上記のフェーズごとの承認は対話セッションを前提としている。GitHub Actions上の`@claude`メンションのような、フェーズごとの往復ができない非対話ターンでは、代わりに`spec-driven-development-ci`skillの基準に従う。
 
 ## GitHub Actions（@claudeメンション）での応答ルール
 
 - `@claude`メンションでの依頼をGitHub Actions上で処理する場合、ターンを終える前に必ず「依頼された作業がどこまで完了したか、完了できなかった場合は何が原因でどこまで進んだか」を明記した結論をPR/Issueのコメントとして残すこと。
 - 進行中のチェックリスト（`- [ ]`等）を更新しただけの状態でターンを終えてはならない。チェックリストが未完了のまま終わる場合は、その理由（権限拒否・ビルド失敗など）と次にすべきことを文章で明示すること。**例外**: `claude-android.yaml`/`claude-ios.yaml`へ検証を引き継いだ項目は、別workflowへの引き継ぎであり放置ではないため、未完了（`- [ ]`）のまま最終応答としてよい。
 - GitHub Actionsのjobが成功（緑）で終わることと、依頼されたタスクを完了できたことは別である。job成功はClaudeのプロセスがエラー無く終了しただけを意味し、タスクの成否はこの最終コメントでのみ人間に伝わる。
-- `claude.yml`で依頼を処理する際は、`android-verify-dispatch`/`ios-verify-dispatch`両スキルの手順に従い、Android Emulator・iOS Simulatorそれぞれでの確認要否を独立に判断すること。必要と判断した場合はそれぞれ`.github/workflows/claude-android.yaml`/`.github/workflows/claude-ios.yaml`をworkflow_dispatchで起動する。`[ui-verify]`タグはプラットフォーム不問の汎用シグナルであり、プラットフォームが依頼文から特定できない場合はコストの安いAndroidをデフォルトとする。両方に該当する依頼であれば両方の検証を行う。
+- `claude.yml`で依頼を処理する際は、`android-emu-verify-dispatch`/`ios-sim-verify-dispatch`両スキルの手順に従い、Android Emulator・iOS Simulatorそれぞれでの確認要否を独立に判断すること。必要と判断した場合はそれぞれ`.github/workflows/claude-android.yaml`/`.github/workflows/claude-ios.yaml`をworkflow_dispatchで起動する。`[ui-verify]`タグはプラットフォーム不問の汎用シグナルであり、プラットフォームが依頼文から特定できない場合はコストの安いAndroidをデフォルトとする。両方に該当する依頼であれば両方の検証を行う。
+- 依頼内容が新機能の追加や既存機能の仕様変更を伴う場合は、実装に着手する前に`spec-driven-development-ci`skillの手順に従うこと。`spec-change-escalation-checker`agentが仕様変更の種類（追加/削除/既存仕様との矛盾）と影響範囲を判定し、影響が限定的な追加・削除（例: 既存のデータモデルやドメイン層に触れず単一画面に閉じる変更）は自動で仕様書更新・実装まで進めてよいが、想定外の影響が懸念される追加・削除（例: データモデルの変更や複数画面にまたがる変更）や既存仕様との矛盾は実装に着手せず、提案内容を最終応答に含めて人間の承認を待つ。
 - `claude.yml`/`claude-android.yaml`/`claude-ios.yaml`いずれのターンでも、最後に必ず`gh pr comment`/`gh issue comment`で起動元コメントへの返信を投稿すること（自動投稿には頼らない）。GitHubのIssue/PRコメントに本来のスレッド返信機能が無いことを踏まえ、コメント本文の先頭に起動元コメントへの引用・リンク（`> 起動元コメントへの返信: <パーマリンク>`）を入れ、返信であることが分かる形にする。
-- GitHub Actions上でTaskツールによりサブエージェント（`android-verify-judge`/`ios-verify-judge`/`ui-verify-judge`等）を呼び出す際は、必ず同期的に（`run_in_background: false`を指定して）呼び出すこと。バックグラウンド（非同期）呼び出しは使わない。非対話的なCIの単発セッションには後続ターンが無く、非同期呼び出しの完了通知を受け取れる機会が無いため、判定結果を使えないままターンが終わってしまう（実際にこの事故が発生し、`ui-verify-judge`の判定を一度も使えないまま完了報告コメントが投稿されずに終わった）。
+- GitHub Actions上でAgentツールによりサブエージェント（`android-pr-emu-need-checker`/`ios-pr-sim-need-checker`/`ui-checker`/`spec-change-escalation-checker`等）を呼び出す際は、必ず同期的に（`run_in_background: false`を指定して）呼び出すこと。バックグラウンド（非同期）呼び出しは使わない。非対話的なCIの単発セッションには後続ターンが無く、非同期呼び出しの完了通知を受け取れる機会が無いため、判定結果を使えないままターンが終わってしまう（実際にこの事故が発生し、`ui-checker`の判定を一度も使えないまま完了報告コメントが投稿されずに終わった）。
 
 ## 言語ルール
 
