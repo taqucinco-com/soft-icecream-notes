@@ -23,7 +23,6 @@ jobs:
 
     runs-on: ubuntu-latest
     permissions:
-      # レビューのみ行うジョブなのでコードを書き換える権限は持たせない。PR本文の編集とコメント投稿にのみpull-requests: writeを使う
       contents: read
       pull-requests: write
       issues: read
