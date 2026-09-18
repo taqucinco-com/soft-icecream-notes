@@ -23,9 +23,10 @@ jobs:
 
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      # レビューのみ行うジョブなのでコードを書き換える権限は持たせない。PR本文の編集とコメント投稿にのみpull-requests: writeを使う
+      contents: read
       pull-requests: write
-      issues: write
+      issues: read
       id-token: write
 
     steps:
@@ -66,13 +67,27 @@ jobs:
 
             '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
           claude_args: >-
-            --allowedTools "Task,
+            --allowedTools "Bash(gh issue list:*),
             Bash(gh issue view:*),
-            Bash(gh search:*),
-            Bash(gh issue list:*),
+            Bash(gh label:*),
+            Bash(gh pr checks:*),
             Bash(gh pr comment:*),
             Bash(gh pr diff:*),
-            Bash(gh pr view:*),
             Bash(gh pr list:*),
-            Bash(cd mobile && *),
-            mcp__github_inline_comment__create_inline_comment"
+            Bash(gh pr review:*),
+            Bash(gh pr view:*),
+            Bash(gh search:*),
+            Bash(git blame:*),
+            Bash(git log:*),
+            Bash(git rev-parse:*),
+            Bash(git show:*),
+            Bash(git status:*),
+            Glob,
+            Grep,
+            mcp__github_inline_comment__create_inline_comment,
+            Read,
+            Skill,
+            SlashCommand,
+            Task,
+            WebFetch"
+            --disallowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git rm:*)"
