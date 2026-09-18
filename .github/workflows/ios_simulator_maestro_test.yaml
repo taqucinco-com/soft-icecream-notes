@@ -4,10 +4,105 @@ on:
   workflow_dispatch:
 
 jobs:
-  ios-simulator-maestro:
+  # シミュレータ向けアプリのビルドとMaestro実行を同じrunnerで行うとディスクを
+  # 食い合うため、jobを分けて別runner（別ディスク）で実行する。
+  # ビルド成果物（Runner.app）はbuild-appでartifactとして保存し、
+  # run-maestroでdownloadして使う。
+  build-app:
     # 手元での動作確認がmacOS 26.6 / Xcode 26.6で取れているので、デフォルトXcodeが26.6の
-    # macos-26に揃える。MaestroのiOSドライバはXCUITestを使うため、Xcodeとシミュレータの
-    # 組み合わせが手元と近いほうが切り分けやすい。
+    # macos-26に揃える。
+    runs-on: macos-26
+    timeout-minutes: 30
+    environment: develop
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - name: Create mobile/.env.local from .env.sample
+        env:
+          GOOGLE_MAP_KEY_ANDROID: ${{ secrets.GOOGLE_MAP_KEY_ANDROID }}
+          GOOGLE_MAP_KEY_IOS: ${{ secrets.GOOGLE_MAP_KEY_IOS }}
+        run: |
+          sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|$GOOGLE_MAP_KEY_ANDROID|" \
+              -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|$GOOGLE_MAP_KEY_IOS|" \
+              mobile/.env.sample > mobile/.env.local
+
+      # CocoaPodsのバージョンはGemfile(cocoapods ~> 1.17.0)で固定しているので、
+      # ランナーにプリインストールされたpodではなくbundler経由のものを使う。
+      - name: Set up Ruby (from .ruby-version)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version-file: .ruby-version
+          bundler-cache: true
+
+      - name: CocoaPods cache
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/Library/Caches/CocoaPods
+            mobile/ios/Pods
+          key: cocoapods-${{ runner.os }}-${{ hashFiles('mobile/ios/Podfile.lock') }}
+          restore-keys: |
+            cocoapods-${{ runner.os }}-
+
+      - name: Pub cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.pub-cache
+          key: pub-cache-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            pub-cache-${{ runner.os }}-
+
+      - name: Set up Flutter (from mobile/.fvmrc)
+        id: flutter_setup
+        uses: kuhnroyal/flutter-fvm-config-action@v3
+        with:
+          path: mobile/.fvmrc
+          setup: "true"
+          cache: "true"
+
+      - name: Dart build_runner cache
+        uses: actions/cache@v6
+        with:
+          path: mobile/.dart_tool
+          key: dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
+          restore-keys: |
+            dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-
+
+      - name: Install Flutter dependencies and generate code
+        working-directory: mobile
+        run: |
+          flutter pub get
+          dart run build_runner build --delete-conflicting-outputs
+
+      # PodfileはFlutter/Generated.xcconfigの存在を要求するため、必ずflutter pub getの後に実行する。
+      - name: Install CocoaPods dependencies
+        working-directory: mobile/ios
+        run: |
+          pod --version
+          bundle exec pod install
+
+      # Maestroはビルドを行わず、インストール済みのアプリをappIdで起動するだけなので、
+      # ここでシミュレータ向けにビルドしておく。--simulatorはビルドモードのデフォルトが
+      # debugになり、署名も不要。
+      - name: Build app for simulator
+        working-directory: mobile
+        run: |
+          flutter build ios --simulator --dart-define-from-file=.env.local
+          ls -d build/ios/iphonesimulator/Runner.app
+
+      - name: Upload simulator app artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ios-simulator-app
+          path: mobile/build/ios/iphonesimulator/Runner.app
+          retention-days: 1
+
+  run-maestro:
+    # シミュレータのセットアップ自体はここで行う（build-appはビルドのみ担当）。
+    needs: build-app
     runs-on: macos-26
     timeout-minutes: 45
     environment: develop
@@ -24,21 +119,18 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Create mobile/.env.local from .env.sample
-        env:
-          GOOGLE_MAP_KEY_ANDROID: ${{ secrets.GOOGLE_MAP_KEY_ANDROID }}
-          GOOGLE_MAP_KEY_IOS: ${{ secrets.GOOGLE_MAP_KEY_IOS }}
-        run: |
-          sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|$GOOGLE_MAP_KEY_ANDROID|" \
-              -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|$GOOGLE_MAP_KEY_IOS|" \
-              mobile/.env.sample > mobile/.env.local
+      - name: Download simulator app artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: ios-simulator-app
+          path: mobile/build/ios/iphonesimulator/Runner.app
 
       # ランナーイメージの更新でXcode/ランタイムのバージョンは変わるため、固定値ではなく
       # 利用可能なものから選ぶ。デバイスは"iPhone 16"があればそれを、無ければ任意のiPhoneを使う。
       #
       # 新規作成デバイスの初回起動はData Migrationに3〜4分かかるが、`simctl boot`自体は
       # 即座に返る。ここでは起動を開始するだけにして、待ち合わせ(bootstatus)はアプリを
-      # インストールする直前に行い、起動時間をFlutterセットアップ〜ビルドの裏に隠す。
+      # インストールする直前に行う。
       - name: Create and boot iOS Simulator
         run: |
           RUNTIME_JSON=$(xcrun simctl list runtimes --json \
@@ -79,70 +171,6 @@ jobs:
             echo "| UDID | \`$UDID\` |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # CocoaPodsのバージョンはGemfile(cocoapods ~> 1.17.0)で固定しているので、
-      # ランナーにプリインストールされたpodではなくbundler経由のものを使う。
-      - name: Set up Ruby (from .ruby-version)
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version-file: .ruby-version
-          bundler-cache: true
-
-      - name: CocoaPods cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/Library/Caches/CocoaPods
-            mobile/ios/Pods
-          key: cocoapods-${{ runner.os }}-${{ hashFiles('mobile/ios/Podfile.lock') }}
-          restore-keys: |
-            cocoapods-${{ runner.os }}-
-
-      - name: Pub cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.pub-cache
-          key: pub-cache-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock') }}
-          restore-keys: |
-            pub-cache-${{ runner.os }}-
-
-      - name: Set up Flutter (from mobile/.fvmrc)
-        id: flutter_setup
-        uses: kuhnroyal/flutter-fvm-config-action@v3
-        with:
-          path: mobile/.fvmrc
-          setup: "true"
-          cache: "true"
-
-      - name: Dart build_runner cache
-        uses: actions/cache@v4
-        with:
-          path: mobile/.dart_tool
-          key: dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
-          restore-keys: |
-            dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-
-
-      - name: Install Flutter dependencies and generate code
-        working-directory: mobile
-        run: |
-          flutter pub get
-          dart run build_runner build --delete-conflicting-outputs
-
-      # PodfileはFlutter/Generated.xcconfigの存在を要求するため、必ずflutter pub getの後に実行する。
-      - name: Install CocoaPods dependencies
-        working-directory: mobile/ios
-        run: |
-          pod --version
-          bundle exec pod install
-
-      # Maestroはビルドを行わず、インストール済みのアプリをappIdで起動するだけなので、
-      # ここでシミュレータ向けにビルドしておく。--simulatorはビルドモードのデフォルトが
-      # debugになり、署名も不要。
-      - name: Build app for simulator
-        working-directory: mobile
-        run: |
-          flutter build ios --simulator --dart-define-from-file=.env.local
-          ls -d build/ios/iphonesimulator/Runner.app
-
       # 先に起動を開始してあるので、ここは残りの起動待ちだけ。
       # `bootstatus`は、状態がBootedでもData Migrationが終わっていなければきちんと待つ
       # （"Waiting on Data Migration"を出す）。"Device already booted, nothing to do."を
@@ -168,16 +196,35 @@ jobs:
 
       # brew経由だとopenjdkの導入が走るため、リリースzipを直接展開する。
       # ランナーにはJava 21(JAVA_HOME_21_arm64)が入っており、Maestroの要件(17+)を満たす。
+      - name: Maestro cache
+        id: maestro-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/maestro
+          key: maestro-${{ runner.os }}-${{ env.MAESTRO_VERSION }}
+
       - name: Install Maestro
+        if: steps.maestro-cache.outputs.cache-hit != 'true'
         run: |
           curl -fsSL -o /tmp/maestro.zip \
             "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
           unzip -q /tmp/maestro.zip -d "$HOME"
+
+      - name: Add Maestro to PATH
+        run: |
           echo "$HOME/maestro/bin" >> "$GITHUB_PATH"
           java -version
           # ここで`maestro --version`を叩くとJVMのコールドスタートで20秒近くかかる。
           # 次のステップでmaestroを実行するので、動かなければそこで分かる。
           ls -l "$HOME/maestro/bin/maestro"
+
+      - name: Start screen recording
+        if: env.SIMULATOR_UDID != ''
+        run: |
+          mkdir -p "$ARTIFACT_DIR"
+          nohup xcrun simctl io "$SIMULATOR_UDID" recordVideo --codec h264 "$ARTIFACT_DIR/maestro-recording.mp4" > /tmp/simctl-record.log 2>&1 &
+          echo "RECORDING_PID=$!" >> "$GITHUB_ENV"
+          disown
 
       # 初回実行時にXCUITestのドライバをシミュレータへ導入するため、時間がかかる。
       - name: Run maestro flow
@@ -190,15 +237,16 @@ jobs:
             --format JUNIT \
             --output "$ARTIFACT_DIR/report.xml"
 
-      - name: Capture screenshot
-        if: always() && env.SIMULATOR_UDID != ''
+      - name: Stop screen recording
+        if: always() && env.SIMULATOR_UDID != '' && env.RECORDING_PID != ''
         run: |
-          mkdir -p "$ARTIFACT_DIR"
-          xcrun simctl io "$SIMULATOR_UDID" screenshot "$ARTIFACT_DIR/screencap.png"
+          kill -INT "$RECORDING_PID" 2>/dev/null || true
+          sleep 2
+          cp /tmp/simctl-record.log "$ARTIFACT_DIR/simctl-record.log" 2>/dev/null || true
 
       - name: Upload maestro artifacts
         if: always() && env.SIMULATOR_UDID != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-maestro-test
           path: ${{ env.ARTIFACT_DIR }}
