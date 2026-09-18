@@ -190,11 +190,22 @@ jobs:
             exit 1
           fi
 
+      - name: Maestro cache
+        id: maestro-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/maestro
+          key: maestro-${{ runner.os }}-${{ env.MAESTRO_VERSION }}
+
       - name: Install Maestro
+        if: steps.maestro-cache.outputs.cache-hit != 'true'
         run: |
           curl -fsSL -o /tmp/maestro.zip \
             "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
           unzip -q /tmp/maestro.zip -d "$HOME"
+
+      - name: Add Maestro to PATH
+        run: |
           echo "$HOME/maestro/bin" >> "$GITHUB_PATH"
           java -version
           # ここで`maestro --version`を叩くとJVMのコールドスタートで時間がかかる。

@@ -2,9 +2,6 @@ name: Android emulator dry run
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feat/ci
 
 jobs:
   android-emulator-integration-test:
