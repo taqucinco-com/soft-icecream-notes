@@ -206,3 +206,20 @@ aws cloudtrail lookup-events \
   --region ap-northeast-1
 
 ```
+
+## Android
+
+キーパスの作成方法
+
+```sh
+keytool -genkeypair \
+  -v \
+  -keystore ci-debug.keystore \
+  -storepass android \
+  -keypass android \
+  -alias androiddebugkey \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000 \
+  -dname "CN=Android Debug,O=Android,C=US"
+```
