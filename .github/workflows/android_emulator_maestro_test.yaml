@@ -2,6 +2,9 @@ name: Android emulator maestro test
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feat/ci
 
 jobs:
   android-emulator-maestro:
