@@ -2,9 +2,6 @@ name: iOS simulator maestro test
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - feat/ci
 
 jobs:
   # シミュレータ向けアプリのビルドとMaestro実行を同じrunnerで行うとディスクを
