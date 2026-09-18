@@ -95,6 +95,7 @@ jobs:
           additional_permissions: |
             actions: write
 
+          # デバッグ時に一時的にtrueにすることはあるかもしれないが基本はfalse
           show_full_output: false
 
           prompt: |
