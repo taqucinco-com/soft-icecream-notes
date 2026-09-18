@@ -2,6 +2,9 @@ name: iOS simulator maestro test
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feat/ci
 
 jobs:
   ios-simulator-maestro:
@@ -179,6 +182,14 @@ jobs:
           # 次のステップでmaestroを実行するので、動かなければそこで分かる。
           ls -l "$HOME/maestro/bin/maestro"
 
+      - name: Start screen recording
+        if: env.SIMULATOR_UDID != ''
+        run: |
+          mkdir -p "$ARTIFACT_DIR"
+          nohup xcrun simctl io "$SIMULATOR_UDID" recordVideo --type=mp4 "$ARTIFACT_DIR/maestro-recording.mp4" > /tmp/simctl-record.log 2>&1 &
+          echo "RECORDING_PID=$!" >> "$GITHUB_ENV"
+          disown
+
       # 初回実行時にXCUITestのドライバをシミュレータへ導入するため、時間がかかる。
       - name: Run maestro flow
         run: |
@@ -190,15 +201,15 @@ jobs:
             --format JUNIT \
             --output "$ARTIFACT_DIR/report.xml"
 
-      - name: Capture screenshot
-        if: always() && env.SIMULATOR_UDID != ''
+      - name: Stop screen recording
+        if: always() && env.SIMULATOR_UDID != '' && env.RECORDING_PID != ''
         run: |
-          mkdir -p "$ARTIFACT_DIR"
-          xcrun simctl io "$SIMULATOR_UDID" screenshot "$ARTIFACT_DIR/screencap.png"
+          kill -INT "$RECORDING_PID" 2>/dev/null || true
+          sleep 2
 
       - name: Upload maestro artifacts
         if: always() && env.SIMULATOR_UDID != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-maestro-test
           path: ${{ env.ARTIFACT_DIR }}

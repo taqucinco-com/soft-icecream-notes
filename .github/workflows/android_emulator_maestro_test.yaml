@@ -82,7 +82,7 @@ jobs:
           ls -l build/app/outputs/flutter-apk/app-debug.apk
 
       - name: Upload debug APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: app-debug-apk
           path: mobile/build/app/outputs/flutter-apk/app-debug.apk
@@ -111,7 +111,7 @@ jobs:
           fetch-depth: 1
 
       - name: Download debug APK artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: app-debug-apk
           path: mobile/build/app/outputs/flutter-apk
@@ -201,6 +201,12 @@ jobs:
           # 次のステップでmaestroを実行するので、動かなければそこで分かる。
           ls -l "$HOME/maestro/bin/maestro"
 
+      - name: Start screen recording
+        run: |
+          mkdir -p "$ARTIFACT_DIR"
+          nohup "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell screenrecord /sdcard/maestro-recording.mp4 > /tmp/screenrecord.log 2>&1 &
+          disown
+
       - name: Run maestro flow
         run: |
           mkdir -p "$ARTIFACT_DIR"
@@ -211,15 +217,16 @@ jobs:
             --format JUNIT \
             --output "$ARTIFACT_DIR/report.xml"
 
-      - name: Capture screenshot
+      - name: Stop screen recording
         if: always()
         run: |
-          mkdir -p "$ARTIFACT_DIR"
-          "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 exec-out screencap -p > "$ARTIFACT_DIR/screencap.png"
+          "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell pkill -SIGINT screenrecord
+          sleep 1
+          "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 pull /sdcard/maestro-recording.mp4 "$ARTIFACT_DIR/maestro-recording.mp4"
 
       - name: Upload maestro artifacts
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-maestro-test
           path: ${{ env.ARTIFACT_DIR }}
