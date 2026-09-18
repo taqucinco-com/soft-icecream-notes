@@ -41,7 +41,7 @@ jobs:
           bundler-cache: true
 
       - name: CocoaPods cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/Library/Caches/CocoaPods
@@ -51,7 +51,7 @@ jobs:
             cocoapods-${{ runner.os }}-
 
       - name: Pub cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.pub-cache
           key: pub-cache-${{ runner.os }}-${{ hashFiles('mobile/pubspec.lock') }}
@@ -67,7 +67,7 @@ jobs:
           cache: "true"
 
       - name: Dart build_runner cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: mobile/.dart_tool
           key: dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
@@ -201,7 +201,7 @@ jobs:
       # ランナーにはJava 21(JAVA_HOME_21_arm64)が入っており、Maestroの要件(17+)を満たす。
       - name: Maestro cache
         id: maestro-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/maestro
           key: maestro-${{ runner.os }}-${{ env.MAESTRO_VERSION }}
@@ -225,7 +225,7 @@ jobs:
         if: env.SIMULATOR_UDID != ''
         run: |
           mkdir -p "$ARTIFACT_DIR"
-          nohup xcrun simctl io "$SIMULATOR_UDID" recordVideo --type=mp4 "$ARTIFACT_DIR/maestro-recording.mp4" > /tmp/simctl-record.log 2>&1 &
+          nohup xcrun simctl io "$SIMULATOR_UDID" recordVideo --codec h264 "$ARTIFACT_DIR/maestro-recording.mp4" > /tmp/simctl-record.log 2>&1 &
           echo "RECORDING_PID=$!" >> "$GITHUB_ENV"
           disown
 
@@ -245,6 +245,7 @@ jobs:
         run: |
           kill -INT "$RECORDING_PID" 2>/dev/null || true
           sleep 2
+          cp /tmp/simctl-record.log "$ARTIFACT_DIR/simctl-record.log" 2>/dev/null || true
 
       - name: Upload maestro artifacts
         if: always() && env.SIMULATOR_UDID != ''
