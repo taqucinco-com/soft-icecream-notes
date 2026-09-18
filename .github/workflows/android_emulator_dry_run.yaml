@@ -75,12 +75,12 @@ jobs:
         if: always()
         run: |
           mkdir -p work
-          adb -s emulator-5554 shell screenrecord /sdcard/screenrecord.mp4 &
+          adb -s emulator-5554 shell screenrecord /data/local/tmp/screenrecord.mp4 &
           sleep 10
           # ここで録画中に任意の操作を行う想定
           adb -s emulator-5554 shell pkill -SIGINT screenrecord
           wait
-          adb -s emulator-5554 pull /sdcard/screenrecord.mp4 work/screenrecord.mp4
+          adb -s emulator-5554 pull /data/local/tmp/screenrecord.mp4 work/screenrecord.mp4
 
       - name: Upload screenshot and screen recording artifacts
         if: always()

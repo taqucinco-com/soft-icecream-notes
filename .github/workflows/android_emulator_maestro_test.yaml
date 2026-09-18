@@ -204,7 +204,7 @@ jobs:
       - name: Start screen recording
         run: |
           mkdir -p "$ARTIFACT_DIR"
-          nohup "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell screenrecord /sdcard/maestro-recording.mp4 > /tmp/screenrecord.log 2>&1 &
+          nohup "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell screenrecord /data/local/tmp/maestro-recording.mp4 > /tmp/screenrecord.log 2>&1 &
           disown
 
       - name: Run maestro flow
@@ -222,7 +222,7 @@ jobs:
         run: |
           "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 shell pkill -SIGINT screenrecord
           sleep 1
-          "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 pull /sdcard/maestro-recording.mp4 "$ARTIFACT_DIR/maestro-recording.mp4"
+          "$ANDROID_HOME/platform-tools/adb" -s emulator-5554 pull /data/local/tmp/maestro-recording.mp4 "$ARTIFACT_DIR/maestro-recording.mp4"
 
       - name: Upload maestro artifacts
         if: always()
