@@ -21,6 +21,7 @@ Claude Code固有のルール。プロジェクト概要やツールに依存し
 - `specs/` 以下の仕様書はコードと同様にレビュー・コミット対象として扱う。
 - 実装フェーズでは一度に1タスクのみ着手し、完了ごとに `tasks.md` を更新する。
 - 上記のフェーズごとの承認は対話セッションを前提としている。GitHub Actions上の`@claude`メンションのような、フェーズごとの往復ができない非対話ターンでは、代わりに`spec-driven-development-ci`skillの基準に従う。
+- `specs/adr/`は例外で、機能仕様（`specs/<feature-name>/`、requirements.md/design.md/tasks.mdの3点セット）ではなくADR（Architecture Decision Record）専用のディレクトリ。単一機能に閉じない横断的な設計判断を`specs/adr/NNNN-<slug>.md`として記録する（例: [`specs/adr/0001-work-directory-per-module-subdirectory.md`](./specs/adr/0001-work-directory-per-module-subdirectory.md)）。上記のフロー・3点セットの構造には従わない。
 
 ## GitHub Actions（@claudeメンション）での応答ルール
 
