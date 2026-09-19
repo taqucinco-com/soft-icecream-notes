@@ -16,7 +16,7 @@ marker="${CLAUDE_PROJECT_DIR:-.}/.ci-tmp/claude_ci_reply_posted_${GITHUB_RUN_ID:
 counter_file="${CLAUDE_PROJECT_DIR:-.}/.ci-tmp/claude_ci_reply_retry_count_${GITHUB_RUN_ID:-local}"
 
 if [ ! -f "$marker" ]; then
-  # 試行回数（ブロック回数）をカウントし、5回以上の場合は無限ループを防ぐために強制突破させる
+  # 試行回数（ブロック回数）をカウントし、10回以上の場合は無限ループを防ぐために強制突破させる
   mkdir -p "$(dirname "$counter_file")"
   count=0
   if [ -f "$counter_file" ]; then
