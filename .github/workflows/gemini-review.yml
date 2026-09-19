@@ -80,7 +80,9 @@ jobs:
           ANTHROPIC_BASE_URL: http://localhost:4000
           ANTHROPIC_AUTH_TOKEN: sk-password
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # github_tokenを省略すると、claude-code-action内部で
+          # claude_code_oauth_tokenに紐づくGitHub Appのインストールトークンが
+          # 自動生成されて使われる（bot名がgithub-actions[bot]ではなくclaude[bot]になるか実験中）
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: "github-actions"
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
