@@ -131,6 +131,9 @@ app.*.symbols
 # ローカルの手動検証・CIとも、このディレクトリ配下は一切コミット対象にしない。
 /work/
 
+# 旧保存先（work/へ移行済み）。既存チェックアウトに残っている画像を誤ってコミットしないためのガード
+.claude/screenshots/
+
 # Track pubspec.lock for reproducible Flutter app builds (overrides the blanket *.lock rule above)
 !mobile/pubspec.lock
 

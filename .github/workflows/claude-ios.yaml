@@ -249,7 +249,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ios-verify-screenshots-${{ github.run_id }}
-          path: work/screenshots/*.png
+          path: work/screenshots/**/*.png
           if-no-files-found: ignore
           retention-days: 14
 

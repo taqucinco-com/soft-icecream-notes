@@ -74,13 +74,13 @@ sleep 10
 
 ## スクリーンショットの保存先（CI環境の制約）
 
-CI環境のサンドボックスは、拡張子やサブディレクトリを問わず`.claude/`配下への書き込みを一律で「sensitive file」として拒否する（ローカル・CIとも保存先を`.claude/`配下ではなく`work/screenshots/`に統一しているのはこのため）。ワークフローのチェックアウト先（`$GITHUB_WORKSPACE`）直下の`work/screenshots/`に保存すること。
+CI環境のサンドボックスは、拡張子やサブディレクトリを問わず`.claude/`配下への書き込みを一律で「sensitive file」として拒否する（ローカル・CIとも保存先を`.claude/`配下ではなく`work/screenshots/<module>/`に統一しているのはこのため）。ワークフローのチェックアウト先（`$GITHUB_WORKSPACE`）直下の`work/screenshots/mobile/`に保存すること。
 
-**必ず`$GITHUB_WORKSPACE`からの絶対パスで書き込むこと。** 本スキルの他のコマンド（`cd mobile && flutter build ...`等）を実行すると、このBashツールは作業ディレクトリがコマンドをまたいで持続する仕様のため、以降のコマンドは`mobile/`に居続けたまま実行される。その状態で相対パス`work/screenshots/<name>.png`に書き込むと、実際には`mobile/work/screenshots/`に保存されてしまい、ワークフロー側の`actions/upload-artifact`（`path: work/screenshots/*.png`、リポジトリルート基準）が何も見つけられず、artifactが作成されない。
+**必ず`$GITHUB_WORKSPACE`からの絶対パスで書き込むこと。** 本スキルの他のコマンド（`cd mobile && flutter build ...`等）を実行すると、このBashツールは作業ディレクトリがコマンドをまたいで持続する仕様のため、以降のコマンドは`mobile/`に居続けたまま実行される。その状態で相対パス`work/screenshots/mobile/<name>.png`に書き込むと、実際には`mobile/work/screenshots/mobile/`に保存されてしまい、ワークフロー側の`actions/upload-artifact`（`path: work/screenshots/**/*.png`、リポジトリルート基準）が何も見つけられず、artifactが作成されない。
 
 ```bash
-mkdir -p "$GITHUB_WORKSPACE/work/screenshots"
-xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/work/screenshots/<name>.png"
+mkdir -p "$GITHUB_WORKSPACE/work/screenshots/mobile"
+xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/work/screenshots/mobile/<name>.png"
 ```
 
-`Run Claude Code`ステップの後続で、ワークフロー（`claude-ios.yaml`）側がこのディレクトリの`*.png`を自動でGitHub Actionsのartifactとしてアップロードし、そのダウンロードリンクをPR/Issueに投稿する。Claude自身がコミットやアップロードを行う必要は無い。評価結果（`<name>-compare.md`/`<name>-compare.json`等）も、呼び出し元のスキル・agentの指示に従って同じ`work/screenshots/`配下に保存する。
+`Run Claude Code`ステップの後続で、ワークフロー（`claude-ios.yaml`）側がこのディレクトリの`*.png`を自動でGitHub Actionsのartifactとしてアップロードし、そのダウンロードリンクをPR/Issueに投稿する。Claude自身がコミットやアップロードを行う必要は無い。評価結果（`<name>-compare.md`/`<name>-compare.json`等）も、呼び出し元のスキル・agentの指示に従って同じ`work/screenshots/mobile/`配下に保存する。
