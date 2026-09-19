@@ -137,6 +137,7 @@ app.*.symbols
 # 旧保存先（work/へ移行済み）。既存チェックアウトに残っている画像を誤ってコミットしないためのガード
 .claude/screenshots/
 
+
 # Track pubspec.lock for reproducible Flutter app builds (overrides the blanket *.lock rule above)
 !mobile/pubspec.lock
 
