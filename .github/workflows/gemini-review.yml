@@ -11,9 +11,11 @@ on:
 jobs:
   claude-review-gemini:
     # issue_commentトリガーの場合、OWNER/MEMBER/COLLABORATORのみ実行を許可
+    # claude-code-review.ymlの/claude-reviewはstartsWith判定のため、
+    # 接頭辞を完全に別にして誤ってそちらも同時起動しないようにする
     if: |
       github.event.issue.pull_request &&
-      startsWith(github.event.comment.body, '/claude-review-gemini') &&
+      startsWith(github.event.comment.body, '/gemini-review') &&
       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
 
     runs-on: ubuntu-latest
@@ -28,8 +30,8 @@ jobs:
       - name: Extract review perspective from comment
         id: review_perspective
         run: |
-          # /claude-review-gemini の後の部分を抽出
-          PERSPECTIVE=$(echo "${{ github.event.comment.body }}" | sed -n 's|^/claude-review-gemini\s*||p' | head -c 500)
+          # /gemini-review の後の部分を抽出
+          PERSPECTIVE=$(echo "${{ github.event.comment.body }}" | sed -n 's|^/gemini-review\s*||p' | head -c 500)
           echo "perspective=${PERSPECTIVE}" >> $GITHUB_OUTPUT
           echo "comment_url=${{ github.event.comment.html_url }}" >> $GITHUB_OUTPUT
 
