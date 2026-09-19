@@ -17,9 +17,9 @@ description: モバイルアプリのスクリーンからVLM（Vision-Language 
 
 2. Figmaなどのデザインデータ
 
-Figmaの場合、Figmaリファレンス画像パスを指定してその構造情報をMCP（`get_metadata`や`get_design_context`）で取得することができ、その形式はXMLである。同じ構造化データであるため形式は違えど比較は可能である。
+Figmaの場合、[.mcp.json](../../../.mcp.json)で定義する`figma`MCPサーバ（`mcp__figma__get_figma_data`）でその構造情報を取得することができ、その形式はYAMLである。同じ構造化データであるため形式は違えど比較は可能である。
 
-https://developers.figma.com/docs/figma-mcp-server/tools-and-prompts/#get_metadata
+https://github.com/GLips/Figma-Context-MCP
 
 3. ユーザーの依頼や指示
 

@@ -22,7 +22,7 @@
   - 検証: `NativeDatabase.memory()`によるインメモリDBに対し、各テーブルへの挿入・取得が期待通り動くことをユニットテストで確認する。
 - [ ] T5: `MemoRepositoryImpl`を実装し、CRUD（感想リストの洗い替え保存を含む）と`servingMachineFilter`付き`watchAll`を提供する。戻り値の型を`MemoRepository`とする`@riverpod`関数（`memoRepository`）も併せて定義する。（design: data層, DIの方針）— 依存: T4
   - 検証: インメモリDBを使い、保存後に`watchAll()`のStreamへ反映されること、フィルタ条件での絞り込み、感想の洗い替え（更新のたびに古い感想が消え新しい感想に置き換わる）をユニットテストで確認する。
-- [ ] T6: `ExifService`を実装する。写真から撮影日時・GPS情報を抽出する。`@riverpod`関数（`exifService`）も併せて定義する。（REQ-1, REQ-2, design: DIの方針）— 依存: T1
+- [x] T6: `ExifService`を実装する。写真から撮影日時・GPS情報を抽出する。`@riverpod`関数（`exifService`）も併せて定義する。（REQ-1, REQ-2, design: DIの方針）— 依存: T1
   - 検証: Exifあり/なしのテスト用画像フィクスチャを用意し、日時・GPS抽出とnullフォールバックの双方をユニットテストで確認する。
 - [ ] T7: `StoreSearchRepositoryImpl`を実装する。座標を丸めたキーで`StoreSearchCache`を検索し、TTL（30日）以内のキャッシュがあればそれを返し、無ければGoogle Places Nearby Searchを呼んで結果をキャッシュにupsertする。戻り値の型を`StoreSearchRepository`とする`@riverpod`関数（`storeSearchRepository`）も併せて定義する。（REQ-2, design: DIの方針, 状態管理・キャッシュ方針）— 依存: T1, T4
   - 検証: フェイクのAPIクライアント（`mocktail`）とインメモリDBを使い、キャッシュミス時にAPIが呼ばれること、キャッシュヒット時にAPIを呼ばないこと、TTL失効後は再度APIが呼ばれることの3パターンをユニットテストで確認する。
