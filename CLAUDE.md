@@ -1,6 +1,8 @@
-# soft-icecream-notes
+@AGENTS.md
 
-食べたソフトクリームの写真からメモを作成するアプリ。
+# CLAUDE.md
+
+Claude Code固有のルール。プロジェクト概要やツールに依存しない共通ルール（言語ルール、Dartコーディングスタイル等）は [AGENTS.md](./AGENTS.md) を参照。
 
 ## 仕様駆動開発のルール
 
@@ -29,12 +31,3 @@
 - 依頼内容が新機能の追加や既存機能の仕様変更を伴う場合は、実装に着手する前に`spec-driven-development-ci`skillの手順に従うこと。`spec-change-escalation-checker`agentが仕様変更の種類（追加/削除/既存仕様との矛盾）と影響範囲を判定し、影響が限定的な追加・削除（例: 既存のデータモデルやドメイン層に触れず単一画面に閉じる変更）は自動で仕様書更新・実装まで進めてよいが、想定外の影響が懸念される追加・削除（例: データモデルの変更や複数画面にまたがる変更）や既存仕様との矛盾は実装に着手せず、提案内容を最終応答に含めて人間の承認を待つ。
 - `claude.yml`/`claude-android.yaml`/`claude-ios.yaml`いずれのターンでも、最後に必ず`gh pr comment`/`gh issue comment`で起動元コメントへの返信を投稿すること（自動投稿には頼らない）。GitHubのIssue/PRコメントに本来のスレッド返信機能が無いことを踏まえ、コメント本文の先頭に起動元コメントへの引用・リンク（`> 起動元コメントへの返信: <パーマリンク>`）を入れ、返信であることが分かる形にする。
 - GitHub Actions上でAgentツールによりサブエージェント（`android-pr-emu-need-checker`/`ios-pr-sim-need-checker`/`ui-checker`/`spec-change-escalation-checker`等）を呼び出す際は、必ず同期的に（`run_in_background: false`を指定して）呼び出すこと。バックグラウンド（非同期）呼び出しは使わない。非対話的なCIの単発セッションには後続ターンが無く、非同期呼び出しの完了通知を受け取れる機会が無いため、判定結果を使えないままターンが終わってしまう（実際にこの事故が発生し、`ui-checker`の判定を一度も使えないまま完了報告コメントが投稿されずに終わった）。
-
-## 言語ルール
-
-コードレビューコメントを含め、Claude Codeが生成する説明文・コメントはすべて日本語で書くこと。コード自体の識別子（変数名・関数名等）は対象外。
-
-## Dartコーディングスタイル (mobile/)
-
-- 型が文脈から推論できる場合は [dot shorthand構文](https://dart.dev/language/dot-shorthands)（`ColorScheme.fromSeed(...)` ではなく `.fromSeed(...)` のように書く記法。Dart 3.10以降の言語機能）を積極的に使う。コンストラクタ呼び出し・static member・enum値のいずれでも使用可。
-- これはコンパイルエラーではなく意図したスタイルなので、コードレビューで指摘しないこと。

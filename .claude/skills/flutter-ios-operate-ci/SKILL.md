@@ -62,7 +62,7 @@ idb connect "$UDID"
 
 ## それ以降の手順
 
-タップ操作・要素ツリー取得（`idb ui describe-all`）・スクリーンショット撮影・ヒットターゲットのデバッグ・座標系の注意点（スクリーンショットはピクセル、idbはポイント）・環境要因の落とし穴は、`.claude/skills/flutter-ios-operate/SKILL.md`の3節以降を使う。**ただし保存先パスだけは次節の指示に従うこと**（`.claude/screenshots/mobile/`ではなく`work/screenshots/`を使う）。
+タップ操作・要素ツリー取得（`idb ui describe-all`）・スクリーンショット撮影・ヒットターゲットのデバッグ・座標系の注意点（スクリーンショットはピクセル、idbはポイント）・環境要因の落とし穴は、`.claude/skills/flutter-ios-operate/SKILL.md`の3節以降を使う。保存先ディレクトリ（`work/screenshots/mobile/`）はローカルと共通だが、**CIでは次節の理由により`$GITHUB_WORKSPACE`からの絶対パスで書き込むこと**。
 
 ## マップ画面の表示待ち（CI環境の制約）
 
@@ -74,7 +74,7 @@ sleep 10
 
 ## スクリーンショットの保存先（CI環境の制約）
 
-CI環境のサンドボックスは、拡張子やサブディレクトリを問わず`.claude/`配下への書き込みを一律で「sensitive file」として拒否する。そのため`flutter-ios-operate`skillが指示する`.claude/screenshots/mobile/`には保存できない。代わりに、ワークフローのチェックアウト先（`$GITHUB_WORKSPACE`）直下の`work/screenshots/`に保存すること。
+CI環境のサンドボックスは、拡張子やサブディレクトリを問わず`.claude/`配下への書き込みを一律で「sensitive file」として拒否する（ローカル・CIとも保存先を`.claude/`配下ではなく`work/screenshots/`に統一しているのはこのため）。ワークフローのチェックアウト先（`$GITHUB_WORKSPACE`）直下の`work/screenshots/`に保存すること。
 
 **必ず`$GITHUB_WORKSPACE`からの絶対パスで書き込むこと。** 本スキルの他のコマンド（`cd mobile && flutter build ...`等）を実行すると、このBashツールは作業ディレクトリがコマンドをまたいで持続する仕様のため、以降のコマンドは`mobile/`に居続けたまま実行される。その状態で相対パス`work/screenshots/<name>.png`に書き込むと、実際には`mobile/work/screenshots/`に保存されてしまい、ワークフロー側の`actions/upload-artifact`（`path: work/screenshots/*.png`、リポジトリルート基準）が何も見つけられず、artifactが作成されない。
 
