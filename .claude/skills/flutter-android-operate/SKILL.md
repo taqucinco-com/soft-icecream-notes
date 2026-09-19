@@ -69,7 +69,7 @@ grep -o 'text="対象テキスト"[^/]*bounds="\[[0-9,]*\]\[[0-9,]*\]"' work/wd.
 # または content-desc="..." で検索（SemanticsLabelが無いWidgetはtext/content-descで拾えないことがある）
 ```
 
-保存先は`/tmp/wd.xml`ではなく作業ディレクトリ配下の`work/wd.xml`にすること（`.gitignore`で`/work/`配下は除外済み）。Bashツールのサンドボックスはデフォルトで作業ディレクトリとセッション専用`$TMPDIR`にしか書き込みを許可せず、裸の`/tmp`直下は対象外のため、`/tmp/wd.xml`への書き込み・読み取りはサンドボックスにブロックされうる（CI上の別の不具合で実際に確認済み。詳細は[`/sandbox`ドキュメント](https://code.claude.com/docs/en/sandboxing)の「Temporary directories」参照）。`cd mobile`した状態のままだと相対パスが`mobile/work/wd.xml`に書き込まれてしまう点は3節のスクリーンショット保存と同様に注意すること。
+保存先は作業ディレクトリ配下の`work/wd.xml`にすること（`.gitignore`で`/work/`配下は除外済み）。Bashツールのサンドボックスは作業ディレクトリとセッション専用`$TMPDIR`にのみ書き込みを許可する仕様のため、裸の`/tmp`直下は対象外（詳細は[`/sandbox`ドキュメント](https://code.claude.com/docs/en/sandboxing)の「Temporary directories」参照）。`cd mobile`した状態のままだと相対パスが`mobile/work/wd.xml`に書き込まれてしまう点は3節のスクリーンショット保存と同様に注意すること。
 
 `bounds="[x1,y1][x2,y2]"`はデバイスの実ピクセル座標そのもの（スケーリング不要）。中心 `((x1+x2)/2, (y1+y2)/2)` をそのまま`adb shell input tap`に渡す。
 

@@ -23,6 +23,16 @@ Claude Code固有のルール。プロジェクト概要やツールに依存し
 - 上記のフェーズごとの承認は対話セッションを前提としている。GitHub Actions上の`@claude`メンションのような、フェーズごとの往復ができない非対話ターンでは、代わりに`spec-driven-development-ci`skillの基準に従う。
 - `specs/adr/`は例外で、機能仕様（`specs/<feature-name>/`、requirements.md/design.md/tasks.mdの3点セット）ではなくADR（Architecture Decision Record）専用のディレクトリ。単一機能に閉じない横断的な設計判断を`specs/adr/NNNN-<slug>.md`として記録する（例: [`specs/adr/0001-work-directory-per-module-subdirectory.md`](./specs/adr/0001-work-directory-per-module-subdirectory.md)）。上記のフロー・3点セットの構造には従わない。
 
+## コメント・ドキュメント記述のルール
+
+コード内のコメント、スクリプト、ドキュメント（スキル定義等）では現在の状態と「なぜそう書いているのか」だけを記載する。過去に発生した不具合、その背景、学習・検討過程は記載しない。過去の経験や判断根拠が記録価値の高い場合は、代わりに`specs/adr/`にADR（Architecture Decision Record）として記録する。
+
+例：
+- ❌ `.ci-tmp/`にマーカーを置く。PR #82で/tmpへの書き込みがブロックされて無限ループが発生したため`
+- ✅ `.ci-tmp/`にマーカーを置く。Bashツールのサンドボックスは作業ディレクトリとセッション専用$TMPDIRにのみ書き込みを許可する仕様のため`
+
+技術的な根拠がある場合（仕様・実装の参照等）はURLやドキュメント参照として残す。ADRはこのプロジェクトの過去の判断・経験を記録する一次情報源となる。
+
 ## GitHub Actions（@claudeメンション）での応答ルール
 
 ### モデル選択の自動化

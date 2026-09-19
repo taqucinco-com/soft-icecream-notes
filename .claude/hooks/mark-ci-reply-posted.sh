@@ -3,12 +3,8 @@
 # gh pr comment / gh issue comment が成功実行されたことを示すマーカーファイルを作る。
 # require-ci-reply.sh (Stopフック) がこれを見て、返信投稿済みかどうかを判定する。
 #
-# マーカーは作業ディレクトリ配下（.ci-tmp/）に置く。サンドボックス化Bashツールの
-# デフォルト書き込み許可対象は「作業ディレクトリ」と「セッション専用の$TMPDIR」のみで、
-# 裸の/tmp直下は対象外のため、/tmp/...への書き込みはサンドボックスにブロックされ、
-# require-ci-reply.shが永遠にマーカーを検出できず無限ブロックする不具合が実際に発生した
-# (PR #82 issuecomment-5738741533/5738782798)。詳細は
-# https://code.claude.com/docs/en/sandboxing の「Temporary directories」参照。
+# マーカーは作業ディレクトリ配下（.ci-tmp/）に置く。Bashツールのサンドボックスは
+# 作業ディレクトリとセッション専用の$TMPDIRにのみ書き込みを許可する仕様のため。
 input="$(cat)"
 success="$(printf '%s' "$input" | jq -r '.tool_response.success // false')"
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""')"

@@ -4,8 +4,8 @@
 # commentで起動元コメントへの返信を投稿すること。mark-ci-reply-posted.sh (PostToolUse)
 # が作るマーカーファイルが無ければ、まだ投稿されていないとみなして停止をブロックする。
 #
-# マーカーのパスは作業ディレクトリ配下（.ci-tmp/）。理由はmark-ci-reply-posted.shの
-# コメント、および https://code.claude.com/docs/en/sandboxing の「Temporary directories」参照。
+# マーカーのパスは作業ディレクトリ配下（.ci-tmp/）。Bashツールのサンドボックスは
+# 作業ディレクトリとセッション専用の$TMPDIRにのみ書き込みを許可する仕様のため。
 marker="${CLAUDE_PROJECT_DIR:-.}/.ci-tmp/claude_ci_reply_posted_${GITHUB_RUN_ID:-local}"
 
 if [ ! -f "$marker" ]; then
