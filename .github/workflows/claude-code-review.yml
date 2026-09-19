@@ -47,6 +47,35 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Clone litellm_localhost
+        run: |
+          git clone https://github.com/taqucinco-com/litellm_localhost.git /tmp/litellm_localhost
+
+      - name: Start LiteLLM proxy with Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          cd /tmp/litellm_localhost
+          export GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          docker compose up -d
+
+          echo "Waiting for LiteLLM to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:4000/v1/models \
+              -H "Authorization: Bearer sk-password" 2>/dev/null | grep -q gemini; then
+              echo "✓ LiteLLM ready at localhost:4000"
+              break
+            fi
+            echo "  Waiting... ($i/30)"
+            sleep 2
+          done
+
+      - name: Adjustment docker volumes
+        run: |
+          docker system df
+          docker system prune -a --volumes -f
+          docker system df
+
       - name: Uncheck the review-trigger checkbox
         if: github.event_name == 'pull_request' && github.event.action == 'edited' && contains(github.event.pull_request.body, '[x] <!-- claude-review-check -->')
         env:
@@ -69,9 +98,12 @@ jobs:
             echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Run Claude Code Review
+      - name: Run Claude Code Review (via LiteLLM/Gemini)
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: http://localhost:4000
+          ANTHROPIC_AUTH_TOKEN: sk-password
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -79,6 +111,7 @@ jobs:
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           track_progress: true
+          settings: /tmp/litellm_localhost/.claude/gemini-settings.json
           prompt: |
             Review the pull request "${{ github.repository }}/pull/${{ steps.pr_number.outputs.number }}".
             ${{ github.event_name == 'issue_comment' && format('レビューの観点: {0}', steps.review_perspective.outputs.perspective) || '- Provide a summary of the changes\n              - Identify any potential issues or improvements\n              - Suggest specific code changes if necessary' }}
@@ -114,3 +147,9 @@ jobs:
             Task,
             WebFetch"
             --disallowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git rm:*)"
+
+      - name: Stop LiteLLM proxy
+        if: always()
+        run: |
+          cd /tmp/litellm_localhost
+          docker compose down
