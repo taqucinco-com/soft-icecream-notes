@@ -86,6 +86,10 @@ jobs:
         id: judge_complexity
         uses: anthropics/claude-code-action@v1
         continue-on-error: true
+        env:
+          # 起動元コメントへの返信を行わない内部専用ステップのため、require-ci-reply.sh
+          # (Stopフック)の返信必須チェックをスキップする。
+          CLAUDE_CI_INTERNAL_STEP: "true"
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
