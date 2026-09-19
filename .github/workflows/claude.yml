@@ -91,7 +91,6 @@ jobs:
           # (Stopフック)の返信必須チェックをスキップする。
           CLAUDE_CI_INTERNAL_STEP: "true"
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           settings: .claude/settings.ci.json
           show_full_output: false
@@ -131,7 +130,6 @@ jobs:
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
           settings: .claude/settings.ci.json
@@ -166,7 +164,6 @@ jobs:
             Bash(dart:*),
             Bash(echo:*),
             Bash(flutter:*),
-            Bash(gh api repos/${{ github.repository }}/branches/*/protection:*),
             Bash(gh issue comment:*),
             Bash(gh issue list:*),
             Bash(gh issue view:*),
