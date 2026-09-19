@@ -91,8 +91,6 @@ jobs:
           # (Stopフック)の返信必須チェックをスキップする。
           CLAUDE_CI_INTERNAL_STEP: "true"
         with:
-          # github_tokenを省略すると、claude-code-action内部でclaude_code_oauth_tokenに
-          # 紐づくGitHub Appのインストールトークンが使われ、gh操作の投稿者がclaude[bot]になる
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           settings: .claude/settings.ci.json
           show_full_output: false
