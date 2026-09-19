@@ -1,31 +1,25 @@
-name: Claude Code Review
+name: Claude Code Review (Gemini via LiteLLM)
+
+# LiteLLM (https://github.com/taqucinco-com/litellm_localhost) をrunner上で起動し、
+# ANTHROPIC_BASE_URL経由でGeminiにリクエストを転送してコードレビューを行う実験用ワークフロー。
+# claude-code-review.ymlとは別ファイルにして、/claude-review-gemini コマンドでのみ起動する。
 
 on:
-  pull_request:
-    types: [opened, ready_for_review, reopened, edited]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
   issue_comment:
     types: [created]
 
 jobs:
-  claude-review:
-    # PR自動レビュー、または /claude-review コマンドでトリガー
+  claude-review-gemini:
     # issue_commentトリガーの場合、OWNER/MEMBER/COLLABORATORのみ実行を許可
+    # claude-code-review.ymlの/claude-reviewはstartsWith判定のため、
+    # 接頭辞を完全に別にして誤ってそちらも同時起動しないようにする
     if: |
-      (github.event_name == 'pull_request' &&
-       !contains(github.event.pull_request.labels.*.name, 'skip-claude-review') &&
-       (github.event.action != 'edited' || contains(github.event.pull_request.body, '[x] <!-- claude-review-check -->'))) ||
-      (github.event_name == 'issue_comment' &&
-       github.event.issue.pull_request &&
-       startsWith(github.event.comment.body, '/claude-review') &&
-       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
+      github.event.issue.pull_request &&
+      startsWith(github.event.comment.body, '/gemini-review') &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
 
     runs-on: ubuntu-latest
+    environment: develop
     permissions:
       contents: read
       pull-requests: write
@@ -33,12 +27,11 @@ jobs:
       id-token: write
 
     steps:
-      - name: Extract review perspective from comment (if issue_comment trigger)
+      - name: Extract review perspective from comment
         id: review_perspective
-        if: github.event_name == 'issue_comment'
         run: |
-          # /claude-review の後の部分を抽出
-          PERSPECTIVE=$(echo "${{ github.event.comment.body }}" | sed -n 's|^/claude-review\s*||p' | head -c 500)
+          # /gemini-review の後の部分を抽出
+          PERSPECTIVE=$(echo "${{ github.event.comment.body }}" | sed -n 's|^/gemini-review\s*||p' | head -c 500)
           echo "perspective=${PERSPECTIVE}" >> $GITHUB_OUTPUT
           echo "comment_url=${{ github.event.comment.html_url }}" >> $GITHUB_OUTPUT
 
@@ -47,31 +40,45 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Uncheck the review-trigger checkbox
-        if: github.event_name == 'pull_request' && github.event.action == 'edited' && contains(github.event.pull_request.body, '[x] <!-- claude-review-check -->')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_BODY: ${{ github.event.pull_request.body }}
+      - name: Clone litellm_localhost
         run: |
-          printf '%s' "$PR_BODY" | sed 's/- \[x\] <!-- claude-review-check -->/- [ ] <!-- claude-review-check -->/' > /tmp/pr-body.md
-          if diff -q <(printf '%s' "$PR_BODY") /tmp/pr-body.md > /dev/null; then
-            echo "::error::チェックボックスの置換パターンが本文とマッチしませんでした"
-            exit 1
-          fi
-          gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body-file /tmp/pr-body.md
+          git clone https://github.com/taqucinco-com/litellm_localhost.git /tmp/litellm_localhost
+
+      - name: Start LiteLLM proxy with Gemini
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          cd /tmp/litellm_localhost
+          docker compose up -d
+
+          echo "Waiting for LiteLLM to be ready..."
+          for i in {1..30}; do
+            if curl -s http://localhost:4000/v1/models \
+              -H "Authorization: Bearer sk-password" 2>/dev/null | grep -q gemini; then
+              echo "✓ LiteLLM ready at localhost:4000"
+              break
+            fi
+            echo "  Waiting... ($i/30)"
+            sleep 2
+          done
+
+      - name: Adjustment docker volumes
+        run: |
+          docker system df
+          docker system prune -a --volumes -f
+          docker system df
 
       - name: Determine PR number
         id: pr_number
         run: |
-          if [ "${{ github.event_name }}" == "issue_comment" ]; then
-            echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
-          else
-            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-          fi
+          echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
 
-      - name: Run Claude Code Review
+      - name: Run Claude Code Review (via LiteLLM/Gemini)
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_BASE_URL: http://localhost:4000
+          ANTHROPIC_AUTH_TOKEN: sk-password
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -79,9 +86,10 @@ jobs:
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           track_progress: true
+          settings: /tmp/litellm_localhost/.claude/gemini-settings.json
           prompt: |
             Review the pull request "${{ github.repository }}/pull/${{ steps.pr_number.outputs.number }}".
-            ${{ github.event_name == 'issue_comment' && format('レビューの観点: {0}', steps.review_perspective.outputs.perspective) || '- Provide a summary of the changes\n              - Identify any potential issues or improvements\n              - Suggest specific code changes if necessary' }}
+            ${{ format('レビューの観点: {0}', steps.review_perspective.outputs.perspective) }}
             You can use the plugin for reviewing with below command.
 
             レビューコメントは日本語で行ってください。
@@ -114,3 +122,9 @@ jobs:
             Task,
             WebFetch"
             --disallowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git rm:*)"
+
+      - name: Stop LiteLLM proxy
+        if: always()
+        run: |
+          cd /tmp/litellm_localhost
+          docker compose down
