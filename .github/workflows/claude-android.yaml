@@ -152,6 +152,8 @@ jobs:
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
+        env:
+          FIGMA_API_KEY: ${{ secrets.FIGMA_API_KEY }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -181,6 +183,7 @@ jobs:
             完了したら、依頼がどこまで完了したか（未完了の場合はその原因と次にすべきこと）を、対象が`pr`なら`gh pr comment ${{ inputs.target_number }} --body '...'`、`issue`なら`gh issue comment ${{ inputs.target_number }} --body '...'`でコメントしてください（CLAUDE.mdのGitHub Actions応答ルールに従うこと）。GitHubのIssue/PRコメントには本来のスレッド返信機能が無いため、**本文の先頭に`> 起動元コメントへの返信: ${{ inputs.source_comment_url }}`という引用行を入れて、起動元コメントへの返信であることが分かる形にしてください**（`claude.yml`側が残した「Android Emulatorでの動作確認」チェックリスト項目に対応する結果報告であることが伝わるように）。このコマンドは`gh pr comment`または`gh issue comment`だけから始まる単一のコマンドとして実行し、事前に`gh --version`等で疎通確認をしたり、他のコマンドと`;`や`&&`で連結したりしないでください（許可されていないコマンドと組み合わせると、非対話的なCI実行では承認待ちのまま失敗します）。本文は`--body`に直接シングルクォートで埋め込み、本文中の`'`は`'\''`に置き換えてください。
 
           claude_args: >-
+            --mcp-config .mcp.json
             --allowedTools "Agent,
             Bash(adb:*),
             Bash(cd mobile && adb:*),
@@ -230,7 +233,9 @@ jobs:
             SlashCommand,
             Task,
             WebFetch,
-            Write"
+            Write,
+            mcp__figma__get_figma_data,
+            mcp__figma__download_figma_images"
 
       - name: Upload UI verification screenshots
         if: always()

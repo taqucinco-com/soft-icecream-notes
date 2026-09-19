@@ -20,20 +20,27 @@ description: ローカル開発環境でAndroidエミュレータ上のicecream_
 
 ### 7-A. Figmaに言及がある場合: Figmaワイヤーフレームとの比較用の資料を用意する
 
+Figma MCPはプロジェクトルート直下の[.mcp.json](../../../.mcp.json)で定義する`figma`サーバ（[Framelink社のfigma-developer-mcp](https://github.com/GLips/Figma-Context-MCP)）を使う。ローカル・CI（`flutter-ui-android-verify-ci`/`flutter-ui-ios-verify-ci`）共通の同一設定・同一ツールセット。
+
 #### 手順
 
-1. design.mdの「Figmaワイヤーフレームとの対応関係」表で、検証したい画面に対応するnode-idを確認する。
-2. Figma MCPの`get_screenshot`（`figma-use`系スキルは不要、読み取りのみなので直接呼び出してよい）でそのnode-idのリファレンス画像を取得し、`work/screenshots/<module>/<name>-figma.png`として保存する（＝「目指すべき成果物」）。
-3. 同じnode-idについて`get_metadata`も呼び出し、各要素のid・name・x/y/width/heightを含む構造情報（下記のようなXML）を取得する。
+1. design.mdの「Figmaワイヤーフレームとの対応関係」表で、検証したい画面に対応するfileKey（Figma URLの`/design/<fileKey>/...`部分）とnode-id（例: `2:2`）を確認する。
+2. `mcp__figma__download_figma_images`（`figma-use`系スキルは不要、読み取りのみなので直接呼び出してよい）で、`nodes: [{nodeId: "<node-id>", fileName: "<name>-figma.png"}]`、`localPath: "work/screenshots/<module>"`を指定してそのnode-idのリファレンス画像を取得・保存する（＝「目指すべき成果物」）。`localPath`はMCPサーバプロセスのカレントディレクトリ（通常はリポジトリルート）からの相対パスとして解決される。
+3. 同じfileKey・node-idについて`mcp__figma__get_figma_data`も呼び出し、各要素のid・name・レイアウト情報を含む構造情報（YAML形式のツリー）を取得する。
 
-   ```xml
-   <frame id="13:76" name="Navigation" x="627" y="50" width="673" height="149">
-     <frame id="13:28" name="Text" x="50" y="63" width="378" height="23">
+   ```yaml
+   - id: "13:76"
+     name: Navigation
+     layout: { x: 627, y: 50, width: 673, height: 149 }
+     children:
+       - id: "13:28"
+         name: Text
+         layout: { x: 50, y: 63, width: 378, height: 23 }
    ```
 
-   これは「要素の有無」「配置・順序」を画像の目視だけに頼らず、要素名・座標という客観的な情報で裏付けるために使う。
-4. `flutter-android-operate`skillの3節の手順で実機の現状スクリーンショットを`work/screenshots/<module>/<name>-app.png`として保存する（＝「現状」）。あわせて同skill4節の`uiautomator dump`でアプリ側の構造（text/content-desc/bounds）も取得しておくと、Figmaの`get_metadata`と直接突き合わせられる。
-5. 画像パス（`<name>-figma.png`/`<name>-app.png`）とメタデータが揃ったら7-Cに進み、`ui-checker`に渡して判定させる。「比較対象」はFigmaのリファレンス（画像・`get_metadata`）であることを7-Cの呼び出しで明示する。
+   これは「要素の有無」「配置・順序」を画像の目視だけに頼らず、要素名・座標という客観的な情報で裏付けるために使う（XMLではなくYAML形式である点に注意。`mobile-screen-vision-compare`スキルの比較は構造化データであれば形式差を許容する）。
+4. `flutter-android-operate`skillの3節の手順で実機の現状スクリーンショットを`work/screenshots/<module>/<name>-app.png`として保存する（＝「現状」）。あわせて同skill4節の`uiautomator dump`でアプリ側の構造（text/content-desc/bounds）も取得しておくと、Figmaの`get_figma_data`と直接突き合わせられる。
+5. 画像パス（`<name>-figma.png`/`<name>-app.png`）とメタデータが揃ったら7-Cに進み、`ui-checker`に渡して判定させる。「比較対象」はFigmaのリファレンス（画像・`get_figma_data`）であることを7-Cの呼び出しで明示する。
 
 ### 7-B. Figmaに言及が無い場合: 単純な構造分析の材料を用意する
 

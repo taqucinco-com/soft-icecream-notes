@@ -142,6 +142,3 @@ app.*.symbols
 
 # build_runner-generated files (riverpod .g.dart etc.); output location set in mobile/build.yaml
 **/generated/**
-
-# Claude
-.claude/.mcp.json
