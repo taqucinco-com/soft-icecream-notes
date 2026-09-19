@@ -21,9 +21,31 @@ Claude Code固有のルール。プロジェクト概要やツールに依存し
 - `specs/` 以下の仕様書はコードと同様にレビュー・コミット対象として扱う。
 - 実装フェーズでは一度に1タスクのみ着手し、完了ごとに `tasks.md` を更新する。
 - 上記のフェーズごとの承認は対話セッションを前提としている。GitHub Actions上の`@claude`メンションのような、フェーズごとの往復ができない非対話ターンでは、代わりに`spec-driven-development-ci`skillの基準に従う。
-- `specs/adr/`は例外で、機能仕様（`specs/<feature-name>/`、requirements.md/design.md/tasks.mdの3点セット）ではなくADR（Architecture Decision Record）専用のディレクトリ。単一機能に閉じない横断的な設計判断を`specs/adr/NNNN-<slug>.md`として記録する（例: [`specs/adr/0001-work-directory-per-module-subdirectory.md`](./specs/adr/0001-work-directory-per-module-subdirectory.md)）。上記のフロー・3点セットの構造には従わない。
+- `specs/adr/`は例外で、機能仕様（`specs/<feature-name>/`、requirements.md/design.md/tasks.mdの3点セット）ではなくADR（Architecture Decision Record）専用のディレクトリ。単一機能に閉じない横断的な設計判断を`specs/adr/yyyyMMddHHmm-<slug>.md`として記録する（例: [`specs/adr/202609191216-sandbox-filesystem-constraints.md`](./specs/adr/202609191216-sandbox-filesystem-constraints.md)）。タイムスタンプ方式を採用することで、複数の開発者が並行開発する際の番号競合を回避する。上記のフロー・3点セットの構造には従わない。
+
+## コメント・ドキュメント記述のルール
+
+コード内のコメント、スクリプト、ドキュメント（スキル定義等）では現在の状態と「なぜそう書いているのか」だけを記載する。過去に発生した不具合、その背景、学習・検討過程は記載しない。過去の経験や判断根拠が記録価値の高い場合は、代わりに`specs/adr/`にADR（Architecture Decision Record）として記録する。
+
+例：
+- ❌ `.ci-tmp/`にマーカーを置く。PR #82で/tmpへの書き込みがブロックされて無限ループが発生したため`
+- ✅ `.ci-tmp/`にマーカーを置く。Bashツールのサンドボックスは作業ディレクトリとセッション専用$TMPDIRにのみ書き込みを許可する仕様のため`
+
+技術的な根拠がある場合（仕様・実装の参照等）はURLやドキュメント参照として残す。ADRはこのプロジェクトの過去の判断・経験を記録する一次情報源となる。
 
 ## GitHub Actions（@claudeメンション）での応答ルール
+
+### モデル選択の自動化
+
+`claude.yml`では、依頼内容の複雑度を自動判定して最適なモデルを選択する仕組みが実装されている。
+
+- **判定エージェント**: `task-complexity-judger`が、PR/Issueコメント の依頼内容を解析し、タスクの複雑度（Simple/Standard/Advanced）を判定する。
+- **モデル選択**: 判定結果に基づいて、Haiku（シンプル）/ Sonnet（標準）/ Opus（複雑）を自動選択。
+- **フォールバック**: 判定失敗時はSonnetをデフォルトで使用。
+
+判定基準は `.claude/agents/task-complexity-judger.md` に記載。
+
+### 応答ルール
 
 - `@claude`メンションでの依頼をGitHub Actions上で処理する場合、ターンを終える前に必ず「依頼された作業がどこまで完了したか、完了できなかった場合は何が原因でどこまで進んだか」を明記した結論をPR/Issueのコメントとして残すこと。
 - 進行中のチェックリスト（`- [ ]`等）を更新しただけの状態でターンを終えてはならない。チェックリストが未完了のまま終わる場合は、その理由（権限拒否・ビルド失敗など）と次にすべきことを文章で明示すること。**例外**: `claude-android.yaml`/`claude-ios.yaml`へ検証を引き継いだ項目は、別workflowへの引き継ぎであり放置ではないため、未完了（`- [ ]`）のまま最終応答としてよい。

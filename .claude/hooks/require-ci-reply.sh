@@ -3,7 +3,17 @@
 # CLAUDE.mdのGitHub Actions応答ルール: ターンを終える前に必ずgh pr comment/gh issue
 # commentで起動元コメントへの返信を投稿すること。mark-ci-reply-posted.sh (PostToolUse)
 # が作るマーカーファイルが無ければ、まだ投稿されていないとみなして停止をブロックする。
-marker="/tmp/claude_ci_reply_posted_${GITHUB_RUN_ID:-local}"
+#
+# マーカーのパスは作業ディレクトリ配下（.ci-tmp/）。Bashツールのサンドボックスは
+# 作業ディレクトリとセッション専用の$TMPDIRにのみ書き込みを許可する仕様のため。
+#
+# CLAUDE_CI_INTERNAL_STEP=trueの場合はこのチェックをスキップする。人間向けの
+# 起動元コメントへの返信を行わない内部専用ステップ（判定専用のAgent呼び出し等）向け。
+if [ "${CLAUDE_CI_INTERNAL_STEP:-false}" = "true" ]; then
+  exit 0
+fi
+
+marker="${CLAUDE_PROJECT_DIR:-.}/.ci-tmp/claude_ci_reply_posted_${GITHUB_RUN_ID:-local}"
 
 if [ ! -f "$marker" ]; then
   jq -n '{

@@ -18,3 +18,17 @@
 `idb`/`simctl`によるiOS Simulatorの起動・タップ操作・スクリーンショット取得の具体的な手順は`flutter-ios-operate`スキル（`.claude/skills/flutter-ios-operate/SKILL.md`）が一次情報源。ここでは重複して定義しない（片方だけ更新されて食い違うのを避けるため）。事前に必要な`idb`のインストール等の環境構築は[CONTRIBUTING.md](./CONTRIBUTING.md)を参照。
 
 Claude Codeに検証させる場合は`flutter-ui-ios-verify`スキル（`.claude/skills/flutter-ui-ios-verify/SKILL.md`）を使う。
+
+## コメント・ドキュメント記述のルール
+
+コード内のコメント、スクリプト、ドキュメント（SKILL.md等）では現在の状態と「なぜそう書いているのか」だけを記載する。過去に発生した不具合、その背景、学習・検討過程は記載しない。過去の経験や判断根拠が記録価値の高い場合は、代わりに`specs/adr/`にADR（Architecture Decision Record）として記録する。
+
+例：
+- ❌ `# /tmp/wd.xmlではなくwork/wd.xmlを使う。PR #82で/tmpへの書き込みがサンドボックスでブロックされる不具合が発生したため`
+- ✅ `# work/wd.xmlに保存する。Bashツールのサンドボックスは作業ディレクトリとセッション専用$TMPDIRにのみ書き込みを許可する仕様のため（詳細は[ドキュメント](...)参照）`
+
+技術的な根拠がある場合（仕様・実装の参照等）はURLやドキュメント参照として残す。
+
+## ADR（Architecture Decision Record）の命名規則
+
+`specs/adr/`に記録するADRのファイル名は`yyyyMMddHHmm-<slug>.md`形式で命名する。連番（`0001`, `0002`, ...）ではなくタイムスタンプを使う理由は、複数の開発者が異なるブランチで並行開発する場合、マージ時に番号の競合が発生するのを回避するため。

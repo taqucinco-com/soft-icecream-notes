@@ -7,6 +7,9 @@
 .buildlog/
 .history
 
+# CI hooks working state (.claude/hooks/mark-ci-reply-posted.sh 等が作業ディレクトリ配下に作る一時マーカー)
+/.ci-tmp/
+
 # Flutter repo-specific
 /bin/cache/
 /bin/internal/bootstrap.bat

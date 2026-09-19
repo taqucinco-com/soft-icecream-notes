@@ -64,10 +64,12 @@ adb -s emulator-5554 exec-out screencap -p > work/screenshots/mobile/<name>.png
 
 ```bash
 adb -s emulator-5554 shell uiautomator dump /sdcard/wd.xml
-adb -s emulator-5554 pull /sdcard/wd.xml /tmp/wd.xml
-grep -o 'text="対象テキスト"[^/]*bounds="\[[0-9,]*\]\[[0-9,]*\]"' /tmp/wd.xml
+adb -s emulator-5554 pull /sdcard/wd.xml work/wd.xml
+grep -o 'text="対象テキスト"[^/]*bounds="\[[0-9,]*\]\[[0-9,]*\]"' work/wd.xml
 # または content-desc="..." で検索（SemanticsLabelが無いWidgetはtext/content-descで拾えないことがある）
 ```
+
+保存先は作業ディレクトリ配下の`work/wd.xml`にすること（`.gitignore`で`/work/`配下は除外済み）。Bashツールのサンドボックスは作業ディレクトリとセッション専用`$TMPDIR`にのみ書き込みを許可する仕様のため、裸の`/tmp`直下は対象外（詳細は[`/sandbox`ドキュメント](https://code.claude.com/docs/en/sandboxing)の「Temporary directories」参照）。`cd mobile`した状態のままだと相対パスが`mobile/work/wd.xml`に書き込まれてしまう点は3節のスクリーンショット保存と同様に注意すること。
 
 `bounds="[x1,y1][x2,y2]"`はデバイスの実ピクセル座標そのもの（スケーリング不要）。中心 `((x1+x2)/2, (y1+y2)/2)` をそのまま`adb shell input tap`に渡す。
 
