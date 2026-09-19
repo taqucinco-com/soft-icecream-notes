@@ -82,6 +82,47 @@ jobs:
       - name: Discard codegen changes to tracked files
         run: git checkout -- mobile/
 
+      - name: Judge task complexity and select model
+        id: judge_complexity
+        uses: anthropics/claude-code-action@v1
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          settings: .claude/settings.ci.json
+          show_full_output: false
+          prompt: |
+            `task-complexity-judger`エージェントを呼び出して、以下の依頼内容の複雑度を判定し、最適なモデルを推奨してください。
+
+            起動元コメントURL: ${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && github.event.comment.html_url || (github.event_name == 'pull_request_review' && github.event.review.html_url || github.event.issue.html_url) }}
+            対象種別: ${{ (github.event_name == 'pull_request_review_comment' || github.event_name == 'pull_request_review' || (github.event_name == 'issue_comment' && github.event.issue.pull_request)) && 'pr' || 'issue' }}
+
+            依頼内容:
+            ${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && github.event.comment.body || (github.event_name == 'pull_request_review' && github.event.review.body || github.event.issue.body) }}
+
+            ## 呼び出し手順
+
+            Agent ツールで `task-complexity-judger` エージェント呼び出してください。エージェントはJSON形式で判定結果を返します。
+
+            返却されたJSONの`model`フィールドの値（`haiku` / `sonnet` / `opus`）を出力してください。
+          claude_args: >-
+            --allowedTools "Agent,
+            Bash,
+            Read,
+            Grep"
+
+      - name: Extract model selection
+        id: model_selection
+        run: |
+          JUDGMENT='${{ steps.judge_complexity.outputs.result }}'
+          MODEL=$(echo "$JUDGMENT" | grep -oP '"model"\s*:\s*"\K[^"]+' | head -1)
+          # フォールバック: 判定失敗時はSonnetを使用
+          if [ -z "$MODEL" ]; then
+            MODEL="sonnet"
+          fi
+          echo "model=$MODEL" >> $GITHUB_OUTPUT
+          echo "Model selected: $MODEL"
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -114,6 +155,7 @@ jobs:
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
           claude_args: >-
+            --model ${{ steps.model_selection.outputs.model }}
             --allowedTools "Agent,
             Bash(cd mobile && dart:*),
             Bash(cd mobile && flutter:*),
