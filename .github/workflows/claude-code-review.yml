@@ -9,33 +9,46 @@ on:
     #   - "src/**/*.tsx"
     #   - "src/**/*.js"
     #   - "src/**/*.jsx"
+  issue_comment:
+    types: [created]
 
 jobs:
   claude-review:
-    # Optional: Filter by PR author
-    # if: |
-    #   github.event.pull_request.user.login == 'external-contributor' ||
-    #   github.event.pull_request.user.login == 'new-developer' ||
-    #   github.event.pull_request.author_association == 'FIRST_TIME_CONTRIBUTOR'
+    # PR自動レビュー、または /claude-review コマンドでトリガー
+    # issue_commentトリガーの場合、OWNER/MEMBER/COLLABORATORのみ実行を許可
     if: |
-      !contains(github.event.pull_request.labels.*.name, 'skip-claude-review') &&
-      (github.event.action != 'edited' || contains(github.event.pull_request.body, '[x] <!-- claude-review-check -->'))
+      (github.event_name == 'pull_request' &&
+       !contains(github.event.pull_request.labels.*.name, 'skip-claude-review') &&
+       (github.event.action != 'edited' || contains(github.event.pull_request.body, '[x] <!-- claude-review-check -->'))) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       startsWith(github.event.comment.body, '/claude-review') &&
+       contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association))
 
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       pull-requests: write
-      issues: write
+      issues: read
       id-token: write
 
     steps:
+      - name: Extract review perspective from comment (if issue_comment trigger)
+        id: review_perspective
+        if: github.event_name == 'issue_comment'
+        run: |
+          # /claude-review の後の部分を抽出
+          PERSPECTIVE=$(echo "${{ github.event.comment.body }}" | sed -n 's|^/claude-review\s*||p' | head -c 500)
+          echo "perspective=${PERSPECTIVE}" >> $GITHUB_OUTPUT
+          echo "comment_url=${{ github.event.comment.html_url }}" >> $GITHUB_OUTPUT
+
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
       - name: Uncheck the review-trigger checkbox
-        if: github.event.action == 'edited' && contains(github.event.pull_request.body, '[x] <!-- claude-review-check -->')
+        if: github.event_name == 'pull_request' && github.event.action == 'edited' && contains(github.event.pull_request.body, '[x] <!-- claude-review-check -->')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_BODY: ${{ github.event.pull_request.body }}
@@ -47,22 +60,54 @@ jobs:
           fi
           gh pr edit ${{ github.event.pull_request.number }} --repo ${{ github.repository }} --body-file /tmp/pr-body.md
 
+      - name: Determine PR number
+        id: pr_number
+        run: |
+          if [ "${{ github.event_name }}" == "issue_comment" ]; then
+            echo "number=${{ github.event.issue.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          allowed_bots: "github-actions"
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           prompt: |
-            Review the pull request "${{ github.repository }}/pull/${{ github.event.pull_request.number }}".
-              - Provide a summary of the changes
-              - Identify any potential issues or improvements
-              - Suggest specific code changes if necessary
+            Review the pull request "${{ github.repository }}/pull/${{ steps.pr_number.outputs.number }}".
+            ${{ github.event_name == 'issue_comment' && format('レビューの観点: {0}', steps.review_perspective.outputs.perspective) || '- Provide a summary of the changes\n              - Identify any potential issues or improvements\n              - Suggest specific code changes if necessary' }}
             You can use the plugin for reviewing with below command.
 
             レビューコメントは日本語で行ってください。
 
-            '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
-          claude_args: '--allowedTools "Task,Bash(gh issue view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(cd mobile && *),mcp__github_inline_comment__create_inline_comment"'
+            '/code-review:code-review ${{ github.repository }}/pull/${{ steps.pr_number.outputs.number }} --comment'
+          claude_args: >-
+            --allowedTools "Bash(gh issue list:*),
+            Bash(gh issue view:*),
+            Bash(gh label:*),
+            Bash(gh pr checks:*),
+            Bash(gh pr comment:*),
+            Bash(gh pr diff:*),
+            Bash(gh pr list:*),
+            Bash(gh pr review:*),
+            Bash(gh pr view:*),
+            Bash(gh search:*),
+            Bash(git blame:*),
+            Bash(git log:*),
+            Bash(git rev-parse:*),
+            Bash(git show:*),
+            Bash(git status:*),
+            Glob,
+            Grep,
+            mcp__github_inline_comment__create_inline_comment,
+            Read,
+            Skill,
+            SlashCommand,
+            Task,
+            WebFetch"
+            --disallowedTools "Bash(git add:*),Bash(git commit:*),Bash(git push:*),Bash(git rm:*)"

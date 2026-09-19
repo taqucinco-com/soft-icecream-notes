@@ -155,7 +155,7 @@ Stream<List<Memo>> memoList(Ref ref) {
 - 外部I/O（Google Places API、Google Maps描画、端末の写真ライブラリ、位置情報、`shared_preferences`）に実際にアクセスするテストは書かない。代わりに次を用いる:
   - drift: `NativeDatabase.memory()`によるインメモリDBでCRUD・フィルタ・Stream発火・`StoreSearchCache`のTTL判定をテストする
   - Google Places API: `StoreSearchRepository`インターフェースをテスト用フェイクに差し替える。HTTP通信自体を検証したい場合のみモックHTTPクライアントを使う
-  - Exif抽出: Exifあり/なしのテスト用画像フィクスチャで`ExifService`を直接テストし、それより上位の層は`ExifMetadata`を返すフェイクに差し替える
+  - Exif抽出: Exifあり/なしのテスト用画像フィクスチャで`ExifServiceImpl`を直接テストし、それより上位の層は`ExifMetadata`を返すフェイクに差し替える
   - `shared_preferences`: `SharedPreferences.setMockInitialValues`、`package_info_plus`: `PackageInfo.setMockInitialValues`を用いる
   - `image_picker` / `google_maps_flutter`等プラットフォームチャネルに依存するWidgetは、Riverpodの`ProviderScope(overrides: [...])`でDI用プロバイダをフェイクに差し替えた上でWidgetテストする
 - tasks.mdの各タスクは「実装」と「その実装を検証する自動テスト」を同一タスク内で完了させることを原則とし、テストを後続タスクへ先送りしない。1タスク（ループの1イテレーション）の完了条件は「対応するテストがgreenであること」とする。
@@ -198,12 +198,12 @@ Stream<List<Memo>> memoList(Ref ref) {
   - `SaveMemoUseCase`: メモを作成・更新する
   - `WatchMemosUseCase`: フィルタ条件付きでメモ一覧を購読する
   - `SaveProfileUseCase` / `WatchProfileUseCase`: プロフィールの保存・購読を行う
-- リポジトリインターフェース: `MemoRepository`, `StoreSearchRepository`, `ProfileRepository`
+- リポジトリインターフェース: `MemoRepository`, `StoreSearchRepository`, `ProfileRepository`, `ExifService`
 
 ### data層
 - `MemoRepositoryImpl`: driftで実装。CRUDとフィルタ付きクエリを提供
 - `StoreSearchRepositoryImpl`: Google Places API (Nearby Search) をラップ
-- `ExifService`: `exif` パッケージを使い写真バイナリから日時・GPSタグを抽出
+- `ExifServiceImpl`: `ExifService`の実装。`exif` パッケージを使い写真バイナリから日時・GPSタグを抽出
 - `ProfileRepositoryImpl`: `shared_preferences`でニックネーム・アイコンパスを保存・取得。選択されたアイコン画像はキャッシュ領域ではなくアプリのドキュメントディレクトリにコピーしてから保存する（一時ファイルが消えて参照切れになるのを防ぐため）
 - drift定義: `AppDatabase`, `Memos` テーブル, `MemoImpressions` テーブル
 
@@ -272,6 +272,10 @@ abstract class StoreSearchRepository {
 abstract class ProfileRepository {
   Stream<UserProfile> watch();
   Future<void> save(UserProfile profile);
+}
+
+abstract class ExifService {
+  Future<ExifMetadata> call(String photoPath);
 }
 
 class ExifMetadata {

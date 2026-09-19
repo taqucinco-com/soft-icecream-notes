@@ -12,11 +12,20 @@ on:
 
 jobs:
   claude:
+    # 起動できるのは OWNER / MEMBER / COLLABORATOR が書いた @claude だけ。
+    # このリポジトリはpublicで、かつジョブがcontents/pull-requests/issues write権限を持つため、
+    # 起動者を絞らないと第三者がコメント経由でwrite権限を操作できてしまう
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      (
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+        (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+        (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+      ) && contains(
+        fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'),
+        (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && github.event.comment.author_association
+        || (github.event_name == 'pull_request_review' && github.event.review.author_association || github.event.issue.author_association)
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: develop
@@ -28,7 +37,7 @@ jobs:
       actions: write # CI結果の読み取りに加え、Android/iOS確認が必要な場合にclaude-android.yaml/claude-ios.yamlをworkflow_dispatchで起動するために必要
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
@@ -57,7 +66,7 @@ jobs:
           cache: "true"
 
       - name: Dart build_runner cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: mobile/.dart_tool
           key: dart-tool-${{ runner.os }}-${{ steps.flutter_setup.outputs.FLUTTER_VERSION }}-${{ hashFiles('mobile/pubspec.lock') }}
@@ -73,6 +82,51 @@ jobs:
       - name: Discard codegen changes to tracked files
         run: git checkout -- mobile/
 
+      - name: Judge task complexity and select model
+        id: judge_complexity
+        uses: anthropics/claude-code-action@v1
+        continue-on-error: true
+        env:
+          # 起動元コメントへの返信を行わない内部専用ステップのため、require-ci-reply.sh
+          # (Stopフック)の返信必須チェックをスキップする。
+          CLAUDE_CI_INTERNAL_STEP: "true"
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          settings: .claude/settings.ci.json
+          show_full_output: false
+          prompt: |
+            `task-complexity-judger`エージェントを呼び出して、以下の依頼内容の複雑度を判定し、最適なモデルを推奨してください。
+
+            起動元コメントURL: ${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && github.event.comment.html_url || (github.event_name == 'pull_request_review' && github.event.review.html_url || github.event.issue.html_url) }}
+            対象種別: ${{ (github.event_name == 'pull_request_review_comment' || github.event_name == 'pull_request_review' || (github.event_name == 'issue_comment' && github.event.issue.pull_request)) && 'pr' || 'issue' }}
+
+            依頼内容:
+            ${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && github.event.comment.body || (github.event_name == 'pull_request_review' && github.event.review.body || github.event.issue.body) }}
+
+            ## 呼び出し手順
+
+            Agent ツールで `task-complexity-judger` エージェント呼び出してください。エージェントはJSON形式で判定結果を返します。
+
+            返却されたJSONの`model`フィールドの値（`haiku` / `sonnet` / `opus`）を出力してください。
+          claude_args: >-
+            --allowedTools "Agent,
+            Bash,
+            Read,
+            Grep"
+
+      - name: Extract model selection
+        id: model_selection
+        run: |
+          JUDGMENT='${{ steps.judge_complexity.outputs.result }}'
+          MODEL=$(echo "$JUDGMENT" | grep -oP '"model"\s*:\s*"\K[^"]+' | head -1)
+          # フォールバック: 判定失敗時はSonnetを使用
+          if [ -z "$MODEL" ]; then
+            MODEL="sonnet"
+          fi
+          echo "model=$MODEL" >> $GITHUB_OUTPUT
+          echo "Model selected: $MODEL"
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
@@ -80,11 +134,14 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
+          settings: .claude/settings.ci.json
+
           # CI結果の読み取りに加え、Android/iOS確認が必要な場合にclaude-android.yaml/claude-ios.yamlをworkflow_dispatchで起動するためにwriteが必要
           additional_permissions: |
             actions: write
 
-          show_full_output: true
+          # デバッグ時に一時的にtrueにすることはあるかもしれないが基本はfalse
+          show_full_output: false
 
           prompt: |
             起動元コメントURL: ${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && github.event.comment.html_url || (github.event_name == 'pull_request_review' && github.event.review.html_url || github.event.issue.html_url) }}
@@ -94,11 +151,62 @@ jobs:
             起動元コメント本文:
             ${{ (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') && github.event.comment.body || (github.event_name == 'pull_request_review' && github.event.review.body || github.event.issue.body) }}
 
-            上記の依頼内容に対応してください。「起動元コメントURL」「対象種別」「対象番号」は、android-verify-dispatch/ios-verify-dispatchスキルでclaude-android.yaml/claude-ios.yamlを起動する際にそのまま使ってください（環境変数の展開やコマンドでの再取得は不要です）。
+            上記の依頼内容に対応してください。起動元コメント本文だけでは意図や文脈が読み取れない場合（短い返信・承認のような文面等、それ単独では自己完結した依頼になっていない場合）は、対応を始める前に`gh issue view`/`gh pr view`（対象種別に応じて`--json body,comments`付きで）で対象Issue/PRの本文と過去のコメント履歴をすべて確認し、それ以前のやり取り（自分が過去に投稿した提案・エスカレーションを含む）を踏まえて対応してください。依頼が新機能の追加や既存機能の仕様変更を伴う場合は、実装に着手する前にspec-driven-development-ciスキルの手順に従ってください。「起動元コメントURL」「対象種別」「対象番号」は、android-emu-verify-dispatch/ios-sim-verify-dispatchスキルでclaude-android.yaml/claude-ios.yamlを起動する際にそのまま使ってください（環境変数の展開やコマンドでの再取得は不要です）。
 
             このturnの最後には、対象種別が`pr`なら`gh pr comment <対象番号> --body '...'`、`issue`なら`gh issue comment <対象番号> --body '...'`で、依頼がどこまで完了したか（未完了の場合はその原因と次にすべきこと）を必ず起動元コメントへの返信として投稿してください。本文の先頭に`> 起動元コメントへの返信: <起動元コメントURL>`という引用行を入れてください。このコマンドは`gh pr comment`または`gh issue comment`だけから始まる単一のコマンドとして実行し、事前の疎通確認や他のコマンドとの連結は行わないでください。
 
           # Optional: Add claude_args to customize behavior and configuration
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-          claude_args: '--allowedTools "Task,WebFetch,Bash(git branch:*),Bash(git checkout:*),Bash(git switch:*),Bash(git push:*),Bash(git add:*),Bash(git commit:*),Bash(git fetch:*),Bash(flutter:*),Bash(dart:*),Bash(cd mobile && *),Bash(echo:*),Bash(sleep:*),Bash(grep:*),Bash(ls:*),Bash(mkdir:*),Bash(gh workflow run:*),Bash(gh pr view:*),Bash(gh issue view:*),Bash(gh pr comment:*),Bash(gh issue comment:*),Bash(gh api:*)"'
+          claude_args: >-
+            --model ${{ steps.model_selection.outputs.model }}
+            --allowedTools "Agent,
+            Bash(cd mobile && dart:*),
+            Bash(cd mobile && flutter:*),
+            Bash(dart:*),
+            Bash(echo:*),
+            Bash(flutter:*),
+            Bash(gh api repos/${{ github.repository }}/branches/*/protection:*),
+            Bash(gh issue comment:*),
+            Bash(gh issue list:*),
+            Bash(gh issue view:*),
+            Bash(gh label:*),
+            Bash(gh pr checks:*),
+            Bash(gh pr comment:*),
+            Bash(gh pr create:*),
+            Bash(gh pr edit:*),
+            Bash(gh pr list:*),
+            Bash(gh pr merge:*),
+            Bash(gh pr review:*),
+            Bash(gh pr view:*),
+            Bash(gh search:*),
+            Bash(gh workflow run claude-android.yaml:*),
+            Bash(gh workflow run claude-ios.yaml:*),
+            Bash(git add:*),
+            Bash(git blame:*),
+            Bash(git branch:*),
+            Bash(git checkout:*),
+            Bash(git cherry-pick:*),
+            Bash(git commit:*),
+            Bash(git fetch:*),
+            Bash(git log:*),
+            Bash(git merge:*),
+            Bash(git pull:*),
+            Bash(git push:*),
+            Bash(git rev-parse:*),
+            Bash(git show:*),
+            Bash(git status:*),
+            Bash(git switch:*),
+            Bash(grep:*),
+            Bash(ls:*),
+            Bash(mkdir:*),
+            Bash(sleep:*),
+            Edit,
+            Glob,
+            Grep,
+            Read,
+            Skill,
+            SlashCommand,
+            Task,
+            WebFetch,
+            Write"
