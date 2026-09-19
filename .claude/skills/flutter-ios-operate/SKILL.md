@@ -11,7 +11,7 @@ description: ローカル開発環境でiOSシミュレータ上のicecream_log(
 
 ## 0. 前提
 
-- iOSシミュレータを使う。`idb`（`idb-companion`含む）とXcodeがセットアップ済みであること（手順はリポジトリ直下の`README.md`「AI agentが直接iOS Simulatorと対話する」節）。
+- iOSシミュレータを使う。`idb`（`idb-companion`含む）とXcodeがセットアップ済みであること（手順はリポジトリ直下の`CONTRIBUTING.md`「iOS Simulator操作環境のセットアップ」節）。
 - **`simctl`と`idb`はBashツールのサンドボックス内では動かない。** 必ず`dangerouslyDisableSandbox: true`で実行すること。サンドボックスは`CoreSimulatorService`へのXPC接続と`/tmp/idb/state.lock`の作成を遮断するため、以下のようなエラーになる（アプリやシミュレータ側の異常ではない）。
 
   ```
@@ -22,7 +22,7 @@ description: ローカル開発環境でiOSシミュレータ上のicecream_log(
   PermissionError: [Errno 1] Operation not permitted: '/tmp/idb/state.lock'
   ```
 
-- スクリーンショットは必ず `.claude/screenshots/<module>/`（例: `mobile/`）配下に保存する。`mobile/`直下やリポジトリ直下には置かない（`.gitignore`で`.claude/screenshots/**/*.png`等が除外されている）。
+- スクリーンショットは必ず `work/screenshots/<module>/`（例: `mobile/`）配下に保存する。`mobile/`直下やリポジトリ直下には置かない（`.gitignore`で`/work/`配下がまるごと除外されている）。
 
 ## 1. シミュレータを起動し、idbを接続する
 
@@ -62,7 +62,7 @@ disown
 - **`-d <UDID>`は必ず明示する。** この開発機には物理iPhoneがネットワーク越しに接続されていることがあり（`flutter devices`に`sudo iPhone17 (wireless)`として現れる）、デバイス指定を省くと実機側にデプロイされうる。
 - **`.env.local`は`mobile/`直下にある**（`mobile/.env.sample`が雛形）。リポジトリ直下ではない。
 - iOSの地図キーは`GOOGLE_MAP_KEY_ANDROID`ではなく**`GOOGLE_MAP_KEY_IOS`**（キーはプラットフォームごとに分かれている）。`mobile/ios/Runner/AppDelegate.swift`がInfo.plistの`DartDefines`経由で読む仕組みのため、**ビルド時に埋め込まれる**。キーを変えた場合はhot restartでは反映されず、ビルドし直しが必要。省略・誤りがあると地図画面（`MapScreen`）が空白になる。
-- 初回やPods更新後は、README記載の事前ビルドが必要になることがある。
+- 初回やPods更新後は、CONTRIBUTING.md記載の事前ビルドが必要になることがある。
 
   ```bash
   cd mobile && fvm flutter build ios --dart-define-from-file=.env.local
@@ -79,10 +79,13 @@ until grep -qE "A Dart VM Service|Lost connection|Error|Exception|Xcode build do
 ## 3. スクリーンショットを撮る
 
 ```bash
-xcrun simctl io <UDID> screenshot .claude/screenshots/mobile/<name>.png
+mkdir -p work/screenshots/mobile
+xcrun simctl io <UDID> screenshot work/screenshots/mobile/<name>.png
 ```
 
-READMEにある`xcrun simctl screenshot <path>`という短縮形は**存在しないサブコマンド**で、usageが表示されるだけなので使わない（`io <UDID> screenshot`が正）。
+`cd mobile`した状態のままだと相対パスが`mobile/work/screenshots/`に書き込まれてしまう。リポジトリ直下からの絶対パスで書くか、事前に`cd`で戻ってから実行すること。
+
+`xcrun simctl screenshot <path>`という短縮形は**存在しないサブコマンド**で、usageが表示されるだけなので使わない（`io <UDID> screenshot`が正）。
 
 撮った画像は Read ツールで開いて目視確認する。
 

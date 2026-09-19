@@ -12,7 +12,7 @@ description: ローカル開発環境でAndroidエミュレータ上のicecream_
 ## 前提
 
 - Androidエミュレータで検証する（iOSシミュレータの場合は`flutter-ui-ios-verify`スキルを使う）。
-- スクリーンショットの保存先は`flutter-android-operate`skillの指示（`.claude/screenshots/<module>/`）に従う。
+- スクリーンショットの保存先は`flutter-android-operate`skillの指示（`work/screenshots/<module>/`）に従う。
 
 ## 画面の評価とui-checkerによるループ
 
@@ -23,7 +23,7 @@ description: ローカル開発環境でAndroidエミュレータ上のicecream_
 #### 手順
 
 1. design.mdの「Figmaワイヤーフレームとの対応関係」表で、検証したい画面に対応するnode-idを確認する。
-2. Figma MCPの`get_screenshot`（`figma-use`系スキルは不要、読み取りのみなので直接呼び出してよい）でそのnode-idのリファレンス画像を取得し、`.claude/screenshots/<module>/<name>-figma.png`として保存する（＝「目指すべき成果物」）。
+2. Figma MCPの`get_screenshot`（`figma-use`系スキルは不要、読み取りのみなので直接呼び出してよい）でそのnode-idのリファレンス画像を取得し、`work/screenshots/<module>/<name>-figma.png`として保存する（＝「目指すべき成果物」）。
 3. 同じnode-idについて`get_metadata`も呼び出し、各要素のid・name・x/y/width/heightを含む構造情報（下記のようなXML）を取得する。
 
    ```xml
@@ -32,7 +32,7 @@ description: ローカル開発環境でAndroidエミュレータ上のicecream_
    ```
 
    これは「要素の有無」「配置・順序」を画像の目視だけに頼らず、要素名・座標という客観的な情報で裏付けるために使う。
-4. `flutter-android-operate`skillの3節の手順で実機の現状スクリーンショットを`.claude/screenshots/<module>/<name>-app.png`として保存する（＝「現状」）。あわせて同skill4節の`uiautomator dump`でアプリ側の構造（text/content-desc/bounds）も取得しておくと、Figmaの`get_metadata`と直接突き合わせられる。
+4. `flutter-android-operate`skillの3節の手順で実機の現状スクリーンショットを`work/screenshots/<module>/<name>-app.png`として保存する（＝「現状」）。あわせて同skill4節の`uiautomator dump`でアプリ側の構造（text/content-desc/bounds）も取得しておくと、Figmaの`get_metadata`と直接突き合わせられる。
 5. 画像パス（`<name>-figma.png`/`<name>-app.png`）とメタデータが揃ったら7-Cに進み、`ui-checker`に渡して判定させる。「比較対象」はFigmaのリファレンス（画像・`get_metadata`）であることを7-Cの呼び出しで明示する。
 
 ### 7-B. Figmaに言及が無い場合: 単純な構造分析の材料を用意する
@@ -41,7 +41,7 @@ Figmaは呼び出さず、実機のスクリーンショットと`uiautomator du
 
 #### 手順
 
-1. `flutter-android-operate`skillの3節の手順で実機のスクリーンショットを`.claude/screenshots/<module>/<name>-app.png`として保存する。
+1. `flutter-android-operate`skillの3節の手順で実機のスクリーンショットを`work/screenshots/<module>/<name>-app.png`として保存する。
 2. 同skill4節の`uiautomator dump`でアプリの構造（text/content-desc/bounds）を取得する。
 3. 画像パスと構造情報が揃ったら7-Cに進み、`ui-checker`に渡して判定させる。「比較対象」はFigmaではなく依頼文で示された期待であることを7-Cの呼び出しで明示する。
 
@@ -60,4 +60,4 @@ Figmaは呼び出さず、実機のスクリーンショットと`uiautomator du
 
 ### 評価結果の保存（Markdown + JSON）
 
-保存の手順・フォーマット（Markdown/JSONの形式、`loop_verdict`の3値等）は`flutter-ui-android-verify`/`flutter-ui-android-verify-ci`/`flutter-ui-ios-verify`/`flutter-ui-ios-verify-ci`の4スキル共通なので`flutter-ui-verify-result-save`スキル（`.claude/skills/flutter-ui-verify-result-save/SKILL.md`）を使う（重複して定義しない）。保存先ディレクトリは`flutter-android-operate`skillの指示（`.claude/screenshots/<module>/`）に従う。上限到達（`loop_verdict: retry_limit_reached`）または`fatal`（`loop_verdict: fatal`）でループを終えた場合も、その時点までに判明していた`criteria`を同様に保存する。
+保存の手順・フォーマット（Markdown/JSONの形式、`loop_verdict`の3値等）は`flutter-ui-android-verify`/`flutter-ui-android-verify-ci`/`flutter-ui-ios-verify`/`flutter-ui-ios-verify-ci`の4スキル共通なので`flutter-ui-verify-result-save`スキル（`.claude/skills/flutter-ui-verify-result-save/SKILL.md`）を使う（重複して定義しない）。保存先ディレクトリは`flutter-android-operate`skillの指示（`work/screenshots/<module>/`）に従う。上限到達（`loop_verdict: retry_limit_reached`）または`fatal`（`loop_verdict: fatal`）でループを終えた場合も、その時点までに判明していた`criteria`を同様に保存する。

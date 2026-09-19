@@ -162,7 +162,7 @@ description: モバイルアプリのスクリーンキャプチャ画像1枚を
 
 ```json
 {
-  "source_image": ".claude/screenshots/mobile/note-list.png",
+  "source_image": "work/screenshots/mobile/note-list.png",
   "image_size": { "width": 1206, "height": 2622 },
   "objects": [
     {

@@ -10,7 +10,7 @@ description: ローカル開発環境でAndroidエミュレータ上のicecream_
 ## 0. 前提
 
 - Androidエミュレータを使う（iOSシミュレータの場合は`flutter-ios-operate`を使う）。起動コマンドは `$ANDROID_HOME/emulator/emulator -avd Medium_Phone_API_35`など。Android Emulatorは起動すると `flutter devices` で `emulator-5554` として認識される。
-- スクリーンショットは必ず `.claude/screenshots/<module>/`（例: `mobile/`）配下に保存する。`mobile/`直下やリポジトリ直下には置かない（git管理対象にしないため。`.gitignore`で`.claude/screenshots/**/*.png`等が除外されている）。ディレクトリを新規作成した場合はそこにも用途を説明する`README.md`を置く。
+- スクリーンショットは必ず `work/screenshots/<module>/`（例: `mobile/`）配下に保存する。`mobile/`直下やリポジトリ直下には置かない（`.gitignore`で`/work/`配下がまるごと除外されている）。
 
 ## 1. エミュレータを起動する
 
@@ -50,8 +50,11 @@ until grep -qE "A Dart VM Service|Lost connection|Error|Exception|Gradle build f
 ## 3. スクリーンショットを撮る
 
 ```bash
-adb -s emulator-5554 exec-out screencap -p > .claude/screenshots/mobile/<name>.png
+mkdir -p work/screenshots/mobile
+adb -s emulator-5554 exec-out screencap -p > work/screenshots/mobile/<name>.png
 ```
+
+`cd mobile`した状態のままだと相対パスが`mobile/work/screenshots/`に書き込まれてしまう。リポジトリ直下からの絶対パスで書くか、事前に`cd`で戻ってから実行すること。
 
 撮った画像は Read ツールで開いて目視確認する。
 
