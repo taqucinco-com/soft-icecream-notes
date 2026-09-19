@@ -168,7 +168,6 @@ jobs:
             Bash(dart:*),
             Bash(echo:*),
             Bash(flutter:*),
-            Bash(gh api repos/${{ github.repository }}/branches/*/protection:*),
             Bash(gh issue comment:*),
             Bash(gh issue list:*),
             Bash(gh issue view:*),
