@@ -2,16 +2,16 @@
 
 実施順に並んでいる。各タスクは1コミットで完結する粒度を想定する。
 
-- [x] 1. 新規skill `.claude/skills/flutter-ui-ios-verify-ci/SKILL.md` を作成する（`flutter-ui-verify-ci`のiOS版。`ios_simulator_idb_dry_run.yaml`/`ios_simulator_dry_run.yaml`の手順を土台に、起動手順のみCI向けに記述し、タップ・要素取得・評価は`flutter-ui-ios-verify`の1〜7節を参照する形にする）
+- [x] 1. 新規skill `.claude/skills/flutter-ui-ios-verify-ci/SKILL.md` を作成する（`flutter-ui-android-verify-ci`のiOS版。`ios_simulator_idb_dry_run.yaml`/`ios_simulator_dry_run.yaml`の手順を土台に、起動手順のみCI向けに記述し、タップ・要素取得・評価は`flutter-ui-ios-verify`の1〜7節を参照する形にする）
   - 対応: requirements.md #8 / design.md コンポーネント4
 
-- [x] 2. 新規agent `.claude/agents/ios-verify-judge.md` を作成する（`spec-reviewer`agentに倣い`tools: Read, Grep, Glob`のみとし、`Bash`は持たせない。iOS Simulator確認要否の判断基準例と、「必要: true/false」＋理由を返す出力形式を明記する）
+- [x] 2. 新規agent `.claude/agents/ios-pr-sim-need-checker.md` を作成する（`spec-reviewer`agentに倣い`tools: Read, Grep, Glob`のみとし、`Bash`は持たせない。iOS Simulator確認要否の判断基準例と、「必要: true/false」＋理由を返す出力形式を明記する）
   - 対応: requirements.md #1, #6 / design.md コンポーネント2
 
-- [x] 3. `.claude/skills/ios-verify-dispatch/SKILL.md` を修正する。判断基準の記述は`ios-verify-judge`agentに移したため削除し、代わりに(a) `Task`ツールで`ios-verify-judge`agentを呼び出す手順、(b) その出力（要否・理由）を元に`gh workflow run claude-ios.yaml --ref develop -f ...`を実行する具体的なコマンド、(c) 起動成功時・失敗時それぞれのPR/Issueコメント文面ガイドに書き換える
+- [x] 3. `.claude/skills/ios-sim-verify-dispatch/SKILL.md` を修正する。判断基準の記述は`ios-pr-sim-need-checker`agentに移したため削除し、代わりに(a) `Agent`ツールで`ios-pr-sim-need-checker`agentを呼び出す手順、(b) その出力（要否・理由）を元に`gh workflow run claude-ios.yaml --ref develop -f ...`を実行する具体的なコマンド、(c) 起動成功時・失敗時それぞれのPR/Issueコメント文面ガイドに書き換える
   - 対応: requirements.md #1, #2, #3, #4, #6 / design.md コンポーネント3、データモデル節
 
-- [x] 4. `CLAUDE.md`の「GitHub Actions（@claudeメンション）での応答ルール」節に、`ios-verify-dispatch`skillの手順に従いiOS Simulator確認要否を判断した上で必要なら`claude-ios.yaml`を起動する旨のルールを追記する
+- [x] 4. `CLAUDE.md`の「GitHub Actions（@claudeメンション）での応答ルール」節に、`ios-sim-verify-dispatch`skillの手順に従いiOS Simulator確認要否を判断した上で必要なら`claude-ios.yaml`を起動する旨のルールを追記する
   - 対応: requirements.md #1, #5, #6 / design.md コンポーネント1
 
 - [x] 5. `.github/workflows/claude.yml`の`permissions.actions`を`read`から`write`に変更し、`Run Claude Code`ステップの`additional_permissions`にも`actions: write`を反映する
@@ -43,3 +43,6 @@
 
 - [ ] 14. ブランチをpushし、`gh workflow run claude-ios.yaml`で手動動作確認を行う（ユーザー確認の上で実施。Simulator起動・idb接続・Claude起動・コメント投稿までの一連の流れをログで確認する）
   - 対応: requirements.md #7, #8, #9, #10 の動作確認
+
+- [x] 15. Issue #56の実運用で判明した不具合を修正する。`claude.yml`の非対話的Bash権限モデルでは`Bash(gh workflow run:*)`しか許可されておらず、事前の`gh --version`疎通確認や、base64エンコード用の別コマンド・複合コマンドが承認待ちのまま失敗し、`claude-ios.yaml`を起動できなかった。(a) `ios-sim-verify-dispatch`skillを、事前疎通確認をしない・`gh workflow run`/`gh pr comment`/`gh issue comment`を単独の単純なコマンドとして実行する・base64をやめてシングルクォート直接埋め込みにする内容に修正、(b) `claude-ios.yaml`の`workflow_dispatch.inputs`を`original_request_b64`/`judged_reason_b64`から`original_request`/`judged_reason`に変更しデコードステップを削除、(c) `design.md`のデータモデル・既知のリスク節を更新
+  - 対応: requirements.md #1, #2, #3, #4 / design.md コンポーネント3・6、データモデル節、既知のリスク節

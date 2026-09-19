@@ -7,6 +7,9 @@
 .buildlog/
 .history
 
+# CI hooks working state (.claude/hooks/mark-ci-reply-posted.sh 等が作業ディレクトリ配下に作る一時マーカー)
+/.ci-tmp/
+
 # Flutter repo-specific
 /bin/cache/
 /bin/internal/bootstrap.bat
@@ -127,20 +130,15 @@ app.*.symbols
 # Local git worktrees
 .github/worktrees/
 
-# CI scratch space (e.g. ui-verify screenshots before artifact upload)
+# Scratch space for AI/CI work (e.g. ui-verify screenshots before artifact upload).
+# ローカルの手動検証・CIとも、このディレクトリ配下は一切コミット対象にしない。
 /work/
+
+# 旧保存先（work/へ移行済み）。既存チェックアウトに残っている画像を誤ってコミットしないためのガード
+.claude/screenshots/
 
 # Track pubspec.lock for reproducible Flutter app builds (overrides the blanket *.lock rule above)
 !mobile/pubspec.lock
 
 # build_runner-generated files (riverpod .g.dart etc.); output location set in mobile/build.yaml
 **/generated/**
-
-# Ad-hoc verification screenshots (adb/simulator captures during manual testing)
-# Image files are ignored; README.md files documenting each directory's purpose stay tracked.
-.claude/screenshots/**/*.png
-.claude/screenshots/**/*.jpg
-.claude/screenshots/**/*.jpeg
-
-# Claude
-.claude/.mcp.json

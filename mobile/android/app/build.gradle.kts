@@ -18,6 +18,7 @@ val dartDefines: Map<String, String> = (project.findProperty("dart-defines") as 
     }
     ?: emptyMap()
 
+// CIデバッグ用のkeystoreを利用する、実体はSSM Parameter StoreにBASE64で登録している
 val ciDebugKeystore = rootProject.file("ci-debug.keystore")
 
 android {
@@ -44,7 +45,7 @@ android {
     }
 
     signingConfigs {
-        if (System.getenv("GITHUB_ACTIONS") == "true" && ciDebugKeystore.exists()) {
+        if (ciDebugKeystore.exists()) {
             getByName("debug") {
                 storeFile = ciDebugKeystore
                 storePassword = "android"

@@ -9,7 +9,7 @@ iOS Simulatorの起動・操作にはmacOSランナーが必要であり、`clau
 1. `claude.yml` 側で、iOS Simulatorでの確認が必要と判断した場合にPR/Issue等の情報を `claude-ios.yaml` に渡して起動する仕組み
 2. `claude-ios.yaml` ワークフロー自体の新規作成
 3. iOS Simulator上での確認が必要かどうかをClaudeエージェントが判断するための仕組み（意味的判断。明示タグは設けない）
-4. `claude-ios.yaml` 起動後、実際にiOS Simulator上でUI検証を行うためのCI環境向け新規スキル（既存の `flutter-ui-ios-verify` はローカル専用のため、`flutter-ui-verify-ci`（Android版）に相当するiOS版を新規作成する）
+4. `claude-ios.yaml` 起動後、実際にiOS Simulator上でUI検証を行うためのCI環境向け新規スキル（既存の `flutter-ui-ios-verify` はローカル専用のため、`flutter-ui-android-verify-ci`（Android版）に相当するiOS版を新規作成する）
 
 # ユーザーストーリー
 
