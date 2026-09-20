@@ -186,13 +186,15 @@ jobs:
           xcrun simctl install "$SIMULATOR_UDID" "$APP"
 
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")
-          FLOW_APP_ID=$(sed -n 's/^appId: *//p' test/e2e/maestro/page_transfar.yaml | head -1)
           echo "インストールしたbundle id: $BUNDLE_ID"
-          echo "フローのappId            : $FLOW_APP_ID"
-          if [ "$BUNDLE_ID" != "$FLOW_APP_ID" ]; then
-            echo "bundle idとappIdが一致しない" >&2
-            exit 1
-          fi
+          for flow in test/e2e/maestro/ios/*.yaml; do
+            FLOW_APP_ID=$(sed -n 's/^appId: *//p' "$flow" | head -1)
+            echo "フローのappId ($flow): $FLOW_APP_ID"
+            if [ "$BUNDLE_ID" != "$FLOW_APP_ID" ]; then
+              echo "bundle idとappIdが一致しない" >&2
+              exit 1
+            fi
+          done
 
       # brew経由だとopenjdkの導入が走るため、リリースzipを直接展開する。
       # ランナーにはJava 21(JAVA_HOME_21_arm64)が入っており、Maestroの要件(17+)を満たす。
@@ -230,7 +232,7 @@ jobs:
       - name: Run maestro flow
         run: |
           mkdir -p "$ARTIFACT_DIR"
-          maestro test mobile/test/e2e/maestro/page_transfar.yaml \
+          maestro test mobile/test/e2e/maestro/ios/ \
             --udid "$SIMULATOR_UDID" \
             --debug-output "$ARTIFACT_DIR/debug" \
             --flatten-debug-output \
