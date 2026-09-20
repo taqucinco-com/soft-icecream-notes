@@ -32,7 +32,7 @@ if [ ! -f "$marker" ]; then
 
   jq -n '{
     decision: "block",
-    reason: "CLAUDE.mdのGitHub Actions応答ルールにより、ターンを終える前に必ずgh pr comment/gh issue commentで起動元コメントへの返信を投稿すること。まだそのコマンドの成功実行が確認できていません。投稿してから終了してください。"
+    reason: "CLAUDE.mdのGitHub Actions応答ルールにより、ターンを終える前に必ずgh pr comment/gh issue commentで起動元コメントへの返信を投稿すること。まだそのコマンドの成功実行がこのフックからは確認できていません。ただし直前のgh pr comment/gh issue commentが実際には成功しており、この確認処理だけが検知に失敗している可能性があるため、再投稿の前に`gh pr view <番号> --json comments`または`gh issue view <番号> --json comments`で、自分（bot）による同内容の返信コメントが既に存在しないか確認すること。既に存在する場合は再投稿せず、存在しない場合のみ投稿してから終了すること。"
   }'
 fi
 exit 0
