@@ -1,8 +1,8 @@
-# page_transfar.yaml のAndroid版。
+# ../ios/page_transfar.yaml のAndroid版。
 # AndroidのapplicationId(com.taqucinco.soft_icecream_notes.icecream_log)は
 # iOSのbundle id(com.taqucinco.softicecreamnotes.icecreamLog)と異なるため、
 # appIdだけを差し替えた同じ手順を別ファイルとして持っている。
-# 手順を変更するときは page_transfar.yaml と両方直すこと。
+# 手順を変更するときは ../ios/page_transfar.yaml と両方直すこと。
 appId: com.taqucinco.soft_icecream_notes.icecream_log
 ---
 # 初期状態にする

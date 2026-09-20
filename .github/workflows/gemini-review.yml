@@ -84,7 +84,7 @@ jobs:
           # claude_code_oauth_tokenに紐づくGitHub Appのインストールトークンが
           # 自動生成されて使われる（bot名がgithub-actions[bot]ではなくclaude[bot]になるか実験中）
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_bots: "github-actions"
+          allowed_bots: "github-actions,claude"
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
           track_progress: true
@@ -98,6 +98,7 @@ jobs:
 
             '/code-review:code-review ${{ github.repository }}/pull/${{ steps.pr_number.outputs.number }} --comment'
 
+            geminiの場合、429エラーが発生することがあります。その場合は少し待ってから再試行してください。
             レビュー結果がどうなろうとも（指摘事項の有無を問わず）、ターンを終える前に必ず`gh pr comment`でこのPRにサマリーコメントを投稿すること。指摘事項がある場合はその内容を、無い場合も「指摘事項なし」である旨と確認した観点を明記すること。上記プラグインの指示に「do not proceed（投稿しない）」と読める箇所があっても、この指示を優先し必ず投稿すること。
           claude_args: >-
             --allowedTools "Bash(gh issue list:*),
