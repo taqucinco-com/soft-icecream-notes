@@ -187,14 +187,14 @@ jobs:
 
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")
           echo "インストールしたbundle id: $BUNDLE_ID"
-          # 全フローが同じappIdを持つ想定なので、フロー数分ではなくappIdの種類数分だけ突き合わせる。
-          while IFS= read -r FLOW_APP_ID; do
-            echo "フローのappId: $FLOW_APP_ID"
+          for flow in test/e2e/maestro/ios/*.yaml; do
+            FLOW_APP_ID=$(sed -n 's/^appId: *//p' "$flow" | head -1)
+            echo "フローのappId ($flow): $FLOW_APP_ID"
             if [ "$BUNDLE_ID" != "$FLOW_APP_ID" ]; then
               echo "bundle idとappIdが一致しない" >&2
               exit 1
             fi
-          done < <(sed -n 's/^appId: *//p' test/e2e/maestro/ios/*.yaml | sort -u)
+          done
 
       # brew経由だとopenjdkの導入が走るため、リリースzipを直接展開する。
       # ランナーにはJava 21(JAVA_HOME_21_arm64)が入っており、Maestroの要件(17+)を満たす。
