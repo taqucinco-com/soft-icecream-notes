@@ -117,6 +117,20 @@ assert_guard_blocked "二重引用符内のバッククォートはコマンド�
 assert_guard_allowed "対象コマンド(gh pr/issue comment等)でなければ判定しない" \
   "echo hello && rm -rf /tmp/x"
 
+# 単一引用符内に実際の改行を含む複数行--body本文の回帰テスト。クォート状態が
+# 改行をまたいで保持されないと、1行目以降に現れる記号を誤ってクォート外と判定する。
+MULTILINE_SEMICOLON=$'gh pr comment 1 --body \'1行目\n2行目にセミコロン ; を含む文章\''
+assert_guard_allowed "単一引用符・複数行の本文の2行目以降にある;は連結とみなさない" \
+  "$MULTILINE_SEMICOLON"
+
+MULTILINE_BACKTICK_AND=$'gh issue comment 111 --body \'1行目\n2行目にバッククォート `test` を含む文章\n3行目に && も\''
+assert_guard_allowed "単一引用符・複数行の本文の2/3行目にあるバッククォート・&&は連結とみなさない" \
+  "$MULTILINE_BACKTICK_AND"
+
+MULTILINE_REAL_AND=$'gh pr comment 1 --body \'1行目\n2行目\' && rm -rf /'
+assert_guard_blocked "複数行の本文だがクォート外の&&は依然連結とみなす" \
+  "$MULTILINE_REAL_AND"
+
 echo "PASS: guard-gh-single-command.sh"
 
 # クリーンアップ

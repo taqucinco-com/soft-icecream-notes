@@ -21,30 +21,49 @@ if printf '%s' "$cmd" | grep -qE '(gh workflow run|gh pr comment|gh issue commen
   # コマンド中のどこかに対象コマンドがあり、かつクォートの外（または連結演算子の
   # 種類によっては二重引用符の中）に連結演算子があれば違反とする。
   # 例: "gh pr comment ... && rm -rf" も "gh --version && gh pr comment ..." も両方拒否する。
-  # バッククォート・単一引用符はawkスクリプト中に直接書くとシェル側のクォート解釈と
-  # 衝突するため、文字コード経由(sprintf)で扱う。プログラムは-f -ではなく引数として
-  # 渡す（-f -にすると標準入力がプログラム読み込みに使われ、パイプで渡す$cmdの方が
-  # awkに届かなくなるため）。
-  is_compound="$(printf '%s' "$cmd" | awk '
-{
-  in_single = 0
-  in_double = 0
-  sq = sprintf("%c", 39)
-  dq = "\""
-  bq = sprintf("%c", 96)
-  n = length($0)
-  for (i = 1; i <= n; i++) {
-    c = substr($0, i, 1)
-    if (c == "\\" && !in_single) { i++; continue }
-    if (c == sq && !in_double) { in_single = !in_single; continue }
-    if (c == dq && !in_single) { in_double = !in_double; continue }
-    if (!in_single && !in_double && (c == ";" || c == "&" || c == "|")) { print 1; exit }
-    if (!in_single && c == bq) { print 1; exit }
-    if (!in_single && c == "$" && substr($0, i + 1, 1) == "(") { print 1; exit }
-  }
-  print 0
-}
-')"
+  # 1文字ずつbashの文字列インデックスで走査する（awkはデフォルトで改行区切りで
+  # レコードを処理するため、単一引用符で囲んだ複数行の--body本文の2行目以降で
+  # クォート状態が失われてしまう。bashの文字列インデックスは埋め込まれた改行を
+  # 特別扱いしないため、この問題が起きない）。
+  is_compound=0
+  in_single=0
+  in_double=0
+  len=${#cmd}
+  i=0
+  while [ "$i" -lt "$len" ]; do
+    c="${cmd:$i:1}"
+    if [ "$in_single" -eq 0 ] && [ "$c" = '\' ]; then
+      i=$((i + 2))
+      continue
+    fi
+    if [ "$in_double" -eq 0 ] && [ "$c" = "'" ]; then
+      in_single=$((1 - in_single))
+      i=$((i + 1))
+      continue
+    fi
+    if [ "$in_single" -eq 0 ] && [ "$c" = '"' ]; then
+      in_double=$((1 - in_double))
+      i=$((i + 1))
+      continue
+    fi
+    if [ "$in_single" -eq 0 ] && [ "$in_double" -eq 0 ]; then
+      case "$c" in
+        ';' | '&' | '|')
+          is_compound=1
+          break
+          ;;
+      esac
+    fi
+    if [ "$in_single" -eq 0 ] && [ "$c" = '`' ]; then
+      is_compound=1
+      break
+    fi
+    if [ "$in_single" -eq 0 ] && [ "$c" = '$' ] && [ "${cmd:$((i + 1)):1}" = '(' ]; then
+      is_compound=1
+      break
+    fi
+    i=$((i + 1))
+  done
 
   if [ "$is_compound" = "1" ]; then
     jq -n '{
