@@ -186,7 +186,7 @@ jobs:
           xcrun simctl install "$SIMULATOR_UDID" "$APP"
 
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP/Info.plist")
-          FLOW_APP_ID=$(sed -n 's/^appId: *//p' test/e2e/maestro/page_transfar.yaml | head -1)
+          FLOW_APP_ID=$(sed -n 's/^appId: *//p' test/e2e/maestro/ios/page_transfar.yaml | head -1)
           echo "インストールしたbundle id: $BUNDLE_ID"
           echo "フローのappId            : $FLOW_APP_ID"
           if [ "$BUNDLE_ID" != "$FLOW_APP_ID" ]; then
