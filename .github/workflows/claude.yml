@@ -134,9 +134,13 @@ jobs:
 
           settings: .claude/settings.ci.json
 
+          allowed_bots: "github-actions,claude"
+
           # CI結果の読み取りに加え、Android/iOS確認が必要な場合にclaude-android.yaml/claude-ios.yamlをworkflow_dispatchで起動するためにwriteが必要
           additional_permissions: |
             actions: write
+
+          track_progress: true
 
           # デバッグ時に一時的にtrueにすることはあるかもしれないが基本はfalse
           show_full_output: false
