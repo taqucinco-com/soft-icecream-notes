@@ -67,6 +67,58 @@ if echo "$OUTPUT_FORCE" | grep -q "decision"; then
 fi
 echo "PASS: CLAUDE_CI_FORCE_EXIT"
 
+# 4. guard-gh-single-command.sh のテスト
+# 連結演算子の判定はシェルのクォート規則に従う。;/&/|は単一引用符・二重引用符の
+# どちらの中でも連結として機能しないため、投稿本文中にこれらの記号を含めても
+# 誤検知してはならない。バッククォート/$()は二重引用符の中でもコマンド置換として
+# 展開されるため、二重引用符の中・クォート外では引き続き検出する。
+echo "Testing guard-gh-single-command.sh..."
+
+assert_guard_allowed() {
+  local desc="$1" cmd="$2"
+  local payload out
+  payload="$(jq -n --arg c "$cmd" '{tool_input: {command: $c}}')"
+  out="$(printf '%s' "$payload" | bash .claude/hooks/guard-gh-single-command.sh)"
+  if printf '%s' "$out" | grep -q "permissionDecision"; then
+    echo "FAIL: expected ALLOWED but got BLOCKED: $desc"
+    exit 1
+  fi
+}
+
+assert_guard_blocked() {
+  local desc="$1" cmd="$2"
+  local payload out
+  payload="$(jq -n --arg c "$cmd" '{tool_input: {command: $c}}')"
+  out="$(printf '%s' "$payload" | bash .claude/hooks/guard-gh-single-command.sh)"
+  if ! printf '%s' "$out" | grep -q "permissionDecision"; then
+    echo "FAIL: expected BLOCKED but got ALLOWED: $desc"
+    exit 1
+  fi
+}
+
+assert_guard_allowed "単一引用符内の記号(;,&&,||,バッククォート)は連結とみなさない" \
+  "gh issue comment 111 --body 'セミコロン ; アンパサンド && パイプ || バッククォート \` について説明する文章'"
+
+assert_guard_allowed "二重引用符内の;/&/|は連結とみなさない" \
+  'gh issue comment 111 --body "セミコロン ; アンパサンド 一つ & パイプ | について説明する文章"'
+
+assert_guard_blocked "クォート外の&&は連結とみなす" \
+  "gh issue comment 111 --body 'ok' && rm -rf /"
+
+assert_guard_blocked "クォート外の;は連結とみなす" \
+  "gh pr comment 1 --body 'ok'; echo pwned"
+
+assert_guard_blocked "二重引用符内の\$()はコマンド置換として連結とみなす" \
+  'gh issue comment 111 --body "danger $(whoami)"'
+
+assert_guard_blocked "二重引用符内のバッククォートはコマンド置換として連結とみなす" \
+  'gh issue comment 111 --body "danger `whoami`"'
+
+assert_guard_allowed "対象コマンド(gh pr/issue comment等)でなければ判定しない" \
+  "echo hello && rm -rf /tmp/x"
+
+echo "PASS: guard-gh-single-command.sh"
+
 # クリーンアップ
 rm -rf "$TEST_DIR"
 echo "=== All Hook Tests Passed Successfully! ==="
