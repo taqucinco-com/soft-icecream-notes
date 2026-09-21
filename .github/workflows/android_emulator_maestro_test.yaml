@@ -167,8 +167,7 @@ jobs:
           "$ANDROID_HOME/platform-tools/adb" devices
 
       # フロー先頭のappIdと一致していないとMaestroが起動できないので、ここで突き合わせる。
-      # AndroidのapplicationIdはiOSのbundle idと異なるため、フローもtest/e2e/maestro/android/
-      # 配下に分けて持っている。
+      # AndroidのapplicationIdはiOSのbundle idと異なるため、フローも別ファイルを使う。
       - name: Install app on emulator
         working-directory: mobile
         run: |
@@ -178,17 +177,15 @@ jobs:
           # ビルド成果物のpackage名を調べるのではなく、「フローが起動しようとするアプリが
           # 実際に端末に入っているか」を直接確かめる。aapt2の場所を探さずに済み、
           # インストールが成功したことの確認にもなる。
-          for flow in test/e2e/maestro/android/*.yaml; do
-            FLOW_APP_ID=$(sed -n 's/^appId: *//p' "$flow" | head -1)
-            echo "フローのappId ($flow): $FLOW_APP_ID"
-            if "$ADB" -s emulator-5554 shell pm list packages | tr -d '\r' | grep -qx "package:$FLOW_APP_ID"; then
-              echo "インストール済みであることを確認した"
-            else
-              echo "appIdのアプリが端末に見つからない: $FLOW_APP_ID" >&2
-              "$ADB" -s emulator-5554 shell pm list packages | tr -d '\r' | grep taqucinco >&2 || true
-              exit 1
-            fi
-          done
+          FLOW_APP_ID=$(sed -n 's/^appId: *//p' test/e2e/maestro/page_transfar_android.yaml | head -1)
+          echo "フローのappId: $FLOW_APP_ID"
+          if "$ADB" -s emulator-5554 shell pm list packages | tr -d '\r' | grep -qx "package:$FLOW_APP_ID"; then
+            echo "インストール済みであることを確認した"
+          else
+            echo "appIdのアプリが端末に見つからない: $FLOW_APP_ID" >&2
+            "$ADB" -s emulator-5554 shell pm list packages | tr -d '\r' | grep taqucinco >&2 || true
+            exit 1
+          fi
 
       - name: Maestro cache
         id: maestro-cache
@@ -221,7 +218,7 @@ jobs:
       - name: Run maestro flow
         run: |
           mkdir -p "$ARTIFACT_DIR"
-          maestro test mobile/test/e2e/maestro/android/ \
+          maestro test mobile/test/e2e/maestro/page_transfar_android.yaml \
             --udid emulator-5554 \
             --debug-output "$ARTIFACT_DIR/debug" \
             --flatten-debug-output \
