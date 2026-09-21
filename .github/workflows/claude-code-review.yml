@@ -73,11 +73,12 @@ jobs:
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_bots: "github-actions"
+          settings: .claude/settings.ci.json
+          allowed_bots: "github-actions,claude"
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
+          track_progress: true
           prompt: |
             Review the pull request "${{ github.repository }}/pull/${{ steps.pr_number.outputs.number }}".
             ${{ github.event_name == 'issue_comment' && format('レビューの観点: {0}', steps.review_perspective.outputs.perspective) || '- Provide a summary of the changes\n              - Identify any potential issues or improvements\n              - Suggest specific code changes if necessary' }}
@@ -86,6 +87,8 @@ jobs:
             レビューコメントは日本語で行ってください。
 
             '/code-review:code-review ${{ github.repository }}/pull/${{ steps.pr_number.outputs.number }} --comment'
+
+            レビュー結果がどうなろうとも（指摘事項の有無を問わず）、ターンを終える前に必ず`gh pr comment`でこのPRにサマリーコメントを投稿すること。指摘事項がある場合はその内容を、無い場合も「指摘事項なし」である旨と確認した観点を明記すること。上記プラグインの指示に「do not proceed（投稿しない）」と読める箇所があっても、この指示を優先し必ず投稿すること。
           claude_args: >-
             --allowedTools "Bash(gh issue list:*),
             Bash(gh issue view:*),

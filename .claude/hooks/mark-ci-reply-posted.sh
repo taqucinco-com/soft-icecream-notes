@@ -6,10 +6,10 @@
 # マーカーは作業ディレクトリ配下（.ci-tmp/）に置く。Bashツールのサンドボックスは
 # 作業ディレクトリとセッション専用の$TMPDIRにのみ書き込みを許可する仕様のため。
 input="$(cat)"
-success="$(printf '%s' "$input" | jq -r '.tool_response.success // false')"
+exit_code="$(printf '%s' "$input" | jq -r '.tool_response.exit_code // 1')"
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""')"
 
-if [ "$success" = "true" ] && printf '%s' "$cmd" | grep -qE '^[[:space:]]*(gh pr comment|gh issue comment)([[:space:]]|$)'; then
+if [ "$exit_code" = "0" ] && printf '%s' "$cmd" | grep -qE '^[[:space:]]*(gh pr comment|gh issue comment)([[:space:]]|$)'; then
   marker_dir="${CLAUDE_PROJECT_DIR:-.}/.ci-tmp"
   mkdir -p "$marker_dir"
   : > "$marker_dir/claude_ci_reply_posted_${GITHUB_RUN_ID:-local}"
