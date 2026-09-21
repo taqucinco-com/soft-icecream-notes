@@ -218,7 +218,7 @@ jobs:
       - name: Run maestro flow
         run: |
           mkdir -p "$ARTIFACT_DIR"
-          maestro test mobile/test/e2e/maestro/page_transfar_android.yaml \
+          maestro test mobile/test/e2e/maestro/android \
             --udid emulator-5554 \
             --debug-output "$ARTIFACT_DIR/debug" \
             --flatten-debug-output \
