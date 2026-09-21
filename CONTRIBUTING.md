@@ -79,7 +79,7 @@ xcrun simctl install {UDID} build/ios/iphonesimulator/Runner.app
 cd ..
 
 # maestro cli
-maestro test ./mobile/test/e2e/maestro/ios/page_transfar.yaml --udid={UDID}
+maestro test ./mobile/test/e2e/maestro/page_transfar.yaml --udid={UDID}
 ```
 
 `idb connect`に相当する接続コマンドはmaestroには無い（`maestro --help`のコマンド一覧にも存在しない）。
