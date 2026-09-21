@@ -171,7 +171,7 @@ jobs:
 
           settings: .claude/settings.ci.json
 
-          allowed_bots: "github-actions"
+          allowed_bots: "github-actions,claude"
 
           additional_permissions: |
             actions: read
