@@ -174,7 +174,7 @@ jobs:
           # ビルド成果物のpackage名を調べるのではなく、「フローが起動しようとするアプリが
           # 実際に端末に入っているか」を直接確かめる。aapt2の場所を探さずに済み、
           # インストールが成功したことの確認にもなる。
-          FLOW_APP_ID=$(sed -n 's/^appId: *//p' test/e2e/maestro/android/page_transfar_android.yaml | head -1)
+          FLOW_APP_ID=com.taqucinco.soft_icecream_notes.icecream_log
           echo "フローのappId: $FLOW_APP_ID"
           if "$ADB" -s emulator-5554 shell pm list packages | tr -d '\r' | grep -qx "package:$FLOW_APP_ID"; then
             echo "インストール済みであることを確認した"
