@@ -8,23 +8,26 @@ export GITHUB_RUN_ID="test-run-123"
 
 echo "=== Hooks Unit Test Suite ==="
 
-# 1. mark-ci-reply-posted.sh のテスト (exit_code == 0 のときマーカーが作られるか)
+# 1. mark-ci-reply-posted.sh のテスト
+# PostToolUseはBashツールの呼び出しが成功した場合のみ発火するため、このフックへの
+# 入力は常に実際のBashツールのtool_response形状（stdout/stderr/interrupted/isImage）
+# を使う。https://code.claude.com/docs/en/hooks#posttooluse-input
 echo "Testing mark-ci-reply-posted.sh..."
 MARKER="$TEST_DIR/.ci-tmp/claude_ci_reply_posted_test-run-123"
 
-# 失敗ケース (exit_code != 0)
-PAYLOAD_FAIL='{"tool_input": {"command": "gh issue comment 1 --body \"test\""}, "tool_response": {"exit_code": 1}}'
-printf '%s' "$PAYLOAD_FAIL" | bash .claude/hooks/mark-ci-reply-posted.sh
+# 対象コマンドでないケース
+PAYLOAD_OTHER='{"tool_input": {"command": "gh pr view 1"}, "tool_response": {"stdout": "", "stderr": "", "interrupted": false, "isImage": false}}'
+printf '%s' "$PAYLOAD_OTHER" | bash .claude/hooks/mark-ci-reply-posted.sh
 if [ -f "$MARKER" ]; then
-  echo "FAIL: Marker created on exit_code=1"
+  echo "FAIL: Marker created for a non-comment command"
   exit 1
 fi
 
-# 成功ケース (exit_code == 0)
-PAYLOAD_SUCC='{"tool_input": {"command": "gh issue comment 1 --body \"test\""}, "tool_response": {"exit_code": 0}}'
+# gh issue comment が実行されたケース (PostToolUse発火時点で成功が保証されている)
+PAYLOAD_SUCC='{"tool_input": {"command": "gh issue comment 1 --body \"test\""}, "tool_response": {"stdout": "", "stderr": "", "interrupted": false, "isImage": false}}'
 printf '%s' "$PAYLOAD_SUCC" | bash .claude/hooks/mark-ci-reply-posted.sh
 if [ ! -f "$MARKER" ]; then
-  echo "FAIL: Marker NOT created on exit_code=0"
+  echo "FAIL: Marker NOT created for gh issue comment"
   exit 1
 fi
 echo "PASS: mark-ci-reply-posted.sh"
