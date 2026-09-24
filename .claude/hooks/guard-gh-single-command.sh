@@ -7,14 +7,63 @@
 # コメント本文は、単一引用符で1つの引数として渡す限り正当な使い方であり
 # (android-emu-verify-dispatch/ios-sim-verify-dispatchスキルの既定パターン)、
 # それを誤検知させないため。
+#
+# 連結演算子の判定はシェルのクォート規則に従う。単一引用符の中はいかなる記号も
+# シェルにとって特別な意味を持たないため、;/&/|/バッククォート/$(はすべて連結と
+# みなさない。二重引用符の中では;/&/|は連結演算子として機能しないため連結と
+# みなさないが、バッククォート/$(はコマンド置換として展開されるため引き続き
+# 連結とみなす。これにより、投稿本文（クォートの中身）に記号や連結演算子を
+# 説明する文章を含めても誤検知しない。
 input="$(cat)"
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""')"
 
 if printf '%s' "$cmd" | grep -qE '(gh workflow run|gh pr comment|gh issue comment)'; then
-  # コマンド中のどこかに対象コマンドがあり、かつどこかに複合演算子があれば違反とする。
+  # コマンド中のどこかに対象コマンドがあり、かつクォートの外（または連結演算子の
+  # 種類によっては二重引用符の中）に連結演算子があれば違反とする。
   # 例: "gh pr comment ... && rm -rf" も "gh --version && gh pr comment ..." も両方拒否する。
+  # 1文字ずつbashの文字列インデックスで走査する（awkはデフォルトで改行区切りで
+  # レコードを処理するため、単一引用符で囲んだ複数行の--body本文の2行目以降で
+  # クォート状態が失われてしまう。bashの文字列インデックスは埋め込まれた改行を
+  # 特別扱いしないため、この問題が起きない）。
   is_compound=0
-  printf '%s' "$cmd" | grep -qE ';|&&|\|\||\$\(|`' && is_compound=1
+  in_single=0
+  in_double=0
+  len=${#cmd}
+  i=0
+  while [ "$i" -lt "$len" ]; do
+    c="${cmd:$i:1}"
+    if [ "$in_single" -eq 0 ] && [ "$c" = '\' ]; then
+      i=$((i + 2))
+      continue
+    fi
+    if [ "$in_double" -eq 0 ] && [ "$c" = "'" ]; then
+      in_single=$((1 - in_single))
+      i=$((i + 1))
+      continue
+    fi
+    if [ "$in_single" -eq 0 ] && [ "$c" = '"' ]; then
+      in_double=$((1 - in_double))
+      i=$((i + 1))
+      continue
+    fi
+    if [ "$in_single" -eq 0 ] && [ "$in_double" -eq 0 ]; then
+      case "$c" in
+        ';' | '&' | '|')
+          is_compound=1
+          break
+          ;;
+      esac
+    fi
+    if [ "$in_single" -eq 0 ] && [ "$c" = '`' ]; then
+      is_compound=1
+      break
+    fi
+    if [ "$in_single" -eq 0 ] && [ "$c" = '$' ] && [ "${cmd:$((i + 1)):1}" = '(' ]; then
+      is_compound=1
+      break
+    fi
+    i=$((i + 1))
+  done
 
   if [ "$is_compound" = "1" ]; then
     jq -n '{
