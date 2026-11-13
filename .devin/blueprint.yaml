@@ -1,0 +1,54 @@
+runs-on: macos
+
+initialize:
+  - name: Install rbenv, fvm and idb
+    run: |
+      brew install rbenv ruby-build leoafarias/fvm/fvm
+      brew trust facebook/fb
+      brew install facebook/fb/idb-companion
+      pip3 install --user fb-idb
+  - name: Install Ruby (.ruby-version) and Flutter (mobile/.fvmrc)
+    run: |
+      rbenv install -s
+      (cd mobile && fvm install)
+  - name: Put rbenv shims and idb on PATH, use UTF-8 for CocoaPods
+    run: |
+      echo "PATH=$HOME/.rbenv/shims:$(python3 -m site --user-base)/bin:$PATH" >> $ENVRC
+      echo "LANG=en_US.UTF-8" >> $ENVRC
+
+maintenance:
+  - name: Install CocoaPods via bundler
+    run: bundle install
+  - name: Create mobile/.env.local from GOOGLE_MAP_KEY_IOS_DEV
+    run: |
+      sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}||" \
+          -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|${GOOGLE_MAP_KEY_IOS_DEV:-}|" \
+          mobile/.env.sample > mobile/.env.local
+  - name: Flutter dependencies and code generation
+    run: |
+      cd mobile
+      fvm flutter pub get
+      fvm dart run build_runner build
+  - name: Install CocoaPods dependencies
+    run: (cd mobile/ios && bundle exec pod install)
+  - name: Pre-build the app for iOS Simulator
+    run: (cd mobile && fvm flutter build ios --simulator --debug --dart-define-from-file=.env.local)
+
+knowledge:
+  - name: build
+    contents: |
+      cd mobile && fvm flutter build ios --simulator --debug --dart-define-from-file=.env.local
+  - name: run-on-simulator
+    contents: |
+      UDID=$(xcrun simctl list devices available | grep -m1 "iPhone 17 (" | grep -oE "[0-9A-F-]{36}"); xcrun simctl boot "$UDID" || true; xcrun simctl bootstatus "$UDID"
+      cd mobile && fvm flutter run -d "$UDID" --dart-define-from-file=.env.local
+      # or: xcrun simctl install "$UDID" build/ios/iphonesimulator/Runner.app && xcrun simctl launch "$UDID" com.taqucinco.softicecreamnotes.icecreamLog
+  - name: test
+    contents: |
+      cd mobile && fvm flutter test
+      cd mobile && fvm flutter test integration_test/app_test.dart -d "$UDID" --dart-define-from-file=.env.local
+  - name: lint
+    contents: cd mobile && fvm flutter analyze
+  - name: notes
+    contents: |
+      Use `fvm flutter` (version pinned in mobile/.fvmrc). Simulator operation via idb is documented in .claude/skills/flutter-ios-operate/SKILL.md. The iOS Google Maps key comes from the repo secret GOOGLE_MAP_KEY_IOS_DEV, written to mobile/.env.local during maintenance (maps are blank without it).
