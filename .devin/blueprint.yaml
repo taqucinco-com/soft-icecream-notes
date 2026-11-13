@@ -53,3 +53,94 @@ knowledge:
   - name: notes
     contents: |
       Use `fvm flutter` (version pinned in mobile/.fvmrc). Simulator operation via idb is documented in .claude/skills/flutter-ios-operate/SKILL.md. The iOS Google Maps key comes from the repo secret GOOGLE_MAP_KEY_IOS_DEV, written to mobile/.env.local during maintenance (maps are blank without it).
+
+---
+runs-on: default
+
+initialize:
+  - name: Install JDK 17 and Flutter Linux dependencies
+    run: |
+      sudo apt-get update -qq
+      sudo apt-get install -y -qq openjdk-17-jdk-headless unzip xz-utils zip libglu1-mesa > /dev/null
+  - name: Install Android SDK and create AVD (API 34, same as android_emulator_maestro_test.yaml)
+    run: |
+      export ANDROID_HOME=$HOME/Android/Sdk
+      curl -fsSL -o /tmp/cmdline-tools.zip https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip
+      rm -rf /tmp/cmdline-tools && unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-tools
+      mkdir -p $ANDROID_HOME/cmdline-tools && rm -rf $ANDROID_HOME/cmdline-tools/latest
+      mv /tmp/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+      yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null
+      $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --install "platform-tools" "emulator" "system-images;android-34;google_apis;x86_64" > /dev/null
+      echo no | $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager create avd -n ci_test -k "system-images;android-34;google_apis;x86_64" --force
+  - name: Route Gradle's Maven Central requests through Google's mirror
+    # Maven Central（repo.maven.apache.org）はDevinの共有IPからのアクセスに429を返すことがあるため、
+    # 同じ内容のGoogleミラー（https://storage-download.googleapis.com/maven-central/index.html）を使う
+    run: |
+      mkdir -p $HOME/.gradle/init.d
+      cat > $HOME/.gradle/init.d/maven-central-mirror.gradle <<'GRADLE'
+      def mirror = 'https://maven-central.storage-download.googleapis.com/maven2/'
+      def redirect = { repos ->
+          repos.withType(MavenArtifactRepository).configureEach { r ->
+              if (r.url.toString().startsWith('https://repo.maven.apache.org/')) r.url = mirror
+          }
+      }
+      beforeSettings { s ->
+          s.pluginManagement.repositories {
+              maven { url mirror }
+              gradlePluginPortal()
+          }
+          redirect(s.pluginManagement.repositories)
+          redirect(s.dependencyResolutionManagement.repositories)
+      }
+      beforeProject { p ->
+          redirect(p.buildscript.repositories)
+          redirect(p.repositories)
+      }
+      GRADLE
+  - name: Install FVM and Flutter (mobile/.fvmrc)
+    run: |
+      cd $HOME/repos/soft-icecream-notes
+      curl -fsSL https://fvm.app/install.sh | bash
+      (cd mobile && $HOME/fvm/bin/fvm install)
+  - name: Put Android SDK, FVM and JDK 17 on PATH
+    run: |
+      echo "ANDROID_HOME=$HOME/Android/Sdk" >> $ENVRC
+      echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $ENVRC
+      echo "PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:$HOME/fvm/bin:$HOME/Android/Sdk/platform-tools:$HOME/Android/Sdk/emulator:$HOME/Android/Sdk/cmdline-tools/latest/bin:$PATH" >> $ENVRC
+
+maintenance:
+  - name: Create mobile/.env.local (Android key from GOOGLE_MAP_KEY_ANDROID_DEV if set)
+    run: |
+      cd $HOME/repos/soft-icecream-notes
+      sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|${GOOGLE_MAP_KEY_ANDROID_DEV:-}|" \
+          -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}||" \
+          mobile/.env.sample > mobile/.env.local
+  - name: Flutter dependencies and code generation
+    run: |
+      cd $HOME/repos/soft-icecream-notes/mobile
+      fvm flutter pub get
+      fvm dart run build_runner build
+  - name: Pre-build the debug APK
+    run: |
+      cd $HOME/repos/soft-icecream-notes/mobile
+      fvm flutter build apk --debug --dart-define-from-file=.env.local
+
+knowledge:
+  - name: build
+    contents: |
+      cd mobile && fvm flutter build apk --debug --dart-define-from-file=.env.local
+  - name: run-on-emulator
+    contents: |
+      nohup emulator -avd ci_test -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect > /tmp/emulator.log 2>&1 &
+      adb wait-for-device; until [ "$(adb shell getprop sys.boot_completed | tr -d '\r')" = 1 ]; do sleep 3; done
+      cd mobile && fvm flutter run -d emulator-5554 --dart-define-from-file=.env.local
+      # or: adb install -r build/app/outputs/flutter-apk/app-debug.apk && adb shell monkey -p com.taqucinco.soft_icecream_notes.icecream_log -c android.intent.category.LAUNCHER 1
+  - name: test
+    contents: |
+      cd mobile && fvm flutter test
+      cd mobile && fvm flutter test integration_test/app_test.dart -d emulator-5554 --dart-define-from-file=.env.local
+  - name: lint
+    contents: cd mobile && fvm flutter analyze
+  - name: notes
+    contents: |
+      Use `fvm flutter` (version pinned in mobile/.fvmrc). The AVD `ci_test` (API 34, google_apis, x86_64) matches .github/workflows/android_emulator_maestro_test.yaml and runs headless with KVM; take screenshots with `adb exec-out screencap -p`. Emulator operation via adb is documented in .claude/skills/flutter-android-operate/SKILL.md. The Android Google Maps key comes from the repo secret GOOGLE_MAP_KEY_ANDROID_DEV if it exists (maps are blank without it). Gradle resolves Maven Central through Google's mirror via ~/.gradle/init.d/maven-central-mirror.gradle.
