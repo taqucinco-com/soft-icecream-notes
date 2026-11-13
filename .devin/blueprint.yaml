@@ -24,9 +24,10 @@ maintenance:
       sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}||" \
           -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|${GOOGLE_MAP_KEY_IOS_DEV:-}|" \
           mobile/.env.sample > mobile/.env.local
-  - name: Flutter dependencies and code generation
+  - name: Flutter iOS artifacts, dependencies and code generation
     run: |
       cd mobile
+      fvm flutter precache --ios
       fvm flutter pub get
       fvm dart run build_runner build
   - name: Install CocoaPods dependencies
