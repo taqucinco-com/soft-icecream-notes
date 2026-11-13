@@ -1,0 +1,23 @@
+default_permissions = "project"
+
+[permissions.project]
+extends = ":workspace"
+
+[permissions.project.filesystem.":workspace_roots"]
+".env" = "deny"
+"**/.env" = "deny"
+".env.local" = "deny"
+"**/.env.local" = "deny"
+"**/*.pem" = "deny"
+"**/*.key" = "deny"
+"**/*.p12" = "deny"
+"**/*.jks" = "deny"
+"**/*.keystore" = "deny"
+"**/key.properties" = "deny"
+"**/local.properties" = "deny"
+"**/google-services.json" = "deny"
+"**/GoogleService-Info.plist" = "deny"
+"**/secrets.yaml" = "deny"
+"**/secrets.json" = "deny"
+".env.*" = "deny"
+"**/.env.*" = "deny"
