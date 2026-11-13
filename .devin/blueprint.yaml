@@ -24,6 +24,7 @@ maintenance:
       sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}||" \
           -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}|${GOOGLE_MAP_KEY_IOS_DEV:-}|" \
           mobile/.env.sample > mobile/.env.local
+      [ -n "${GOOGLE_MAP_KEY_IOS_DEV:-}" ] || echo "GOOGLE_MAP_KEY_IOS_DEVが未設定のため、iOSの地図キーは空になる"
   - name: FlutterのiOS用アーティファクト取得・依存解決・コード生成
     run: |
       cd mobile
@@ -115,6 +116,7 @@ maintenance:
       sed -e "s|{YOUR_GOOGLE_MAP_KEY_ANDROID_HERE}|${GOOGLE_MAP_KEY_ANDROID_DEV:-}|" \
           -e "s|{YOUR_GOOGLE_MAP_KEY_IOS_HERE}||" \
           mobile/.env.sample > mobile/.env.local
+      [ -n "${GOOGLE_MAP_KEY_ANDROID_DEV:-}" ] || echo "GOOGLE_MAP_KEY_ANDROID_DEVが未設定のため、Androidの地図キーは空になる"
   - name: Flutterの依存解決とコード生成
     run: |
       cd $HOME/repos/soft-icecream-notes/mobile
