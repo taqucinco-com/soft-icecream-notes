@@ -1,3 +1,6 @@
+# prefix_rule はコマンドの引数列の前方一致で、位置を指定しない一致（引数の後ろに現れるフラグ、globを含むファイル名）は表現できない。
+# 一致しない形（例: git push origin feature --force）は許可される。ファイル名のglobによる禁止は config.toml の filesystem で行う。
+
 prefix_rule(
     pattern = ["rm", ["-rf", "-fr"]],
     decision = "forbidden",
@@ -7,18 +10,18 @@ prefix_rule(
 )
 
 prefix_rule(
-    pattern = ["git", "push", ["--force", "-f"]],
+    pattern = ["git", "push", ["--force", "--force-with-lease", "-f"]],
     decision = "forbidden",
     justification = "強制pushは禁止。",
-    match = ["git push --force", "git push -f origin feature"],
+    match = ["git push --force", "git push --force-with-lease origin feature", "git push -f origin feature"],
     not_match = ["git push origin feature"],
 )
 
 prefix_rule(
-    pattern = ["git", "push", "origin", "main", "--force"],
+    pattern = ["git", "push", "origin", "main", ["--force", "--force-with-lease", "-f"]],
     decision = "forbidden",
     justification = "mainへの強制pushは禁止。",
-    match = ["git push origin main --force"],
+    match = ["git push origin main --force", "git push origin main -f", "git push origin main --force-with-lease"],
     not_match = ["git push origin main"],
 )
 
@@ -63,9 +66,28 @@ prefix_rule(
 )
 
 prefix_rule(
-    pattern = ["cat", [".env", ".env.local", "key.properties"]],
+    pattern = [
+        "cat",
+        [
+            ".env",
+            "./.env",
+            ".env.local",
+            "./.env.local",
+            ".env.sample",
+            ".env.production",
+            ".env.development",
+            "mobile/.env",
+            "mobile/.env.local",
+            "mobile/.env.sample",
+            "./mobile/.env.local",
+            "key.properties",
+            "mobile/android/key.properties",
+            "mobile/android/local.properties",
+            "mobile/android/_ci-debug.keystore",
+        ],
+    ],
     decision = "forbidden",
     justification = "秘密情報を含むファイルの内容表示は禁止。",
-    match = ["cat .env", "cat .env.local", "cat key.properties"],
+    match = ["cat .env", "cat ./.env", "cat .env.production", "cat mobile/.env.local", "cat mobile/android/key.properties"],
     not_match = ["cat README.md"],
 )

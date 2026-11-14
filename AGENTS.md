@@ -111,7 +111,7 @@ Devinはリポジトリ内の`.claude/`配下を読むため、skills・subagent
 `.codex/config.toml`に`.claude/settings.json`の`permissions.deny`のうちファイルパスのルールを変換して置く。`.claude/settings.json`の`permissions`を変更したときは`.codex/config.toml`も同じ内容に更新する。
 
 - `Read(glob)`・`Edit(glob)`・`Write(glob)`は、Codexの`[permissions.project.filesystem.":workspace_roots"]`に`"glob" = "deny"`として統合する（重複は除く）。Codexのファイル権限は`deny`が読み取りも書き込みも拒否し、操作ごとに分けられないため。
-- `./`で始まるルートパスは、`:workspace_roots`配下の相対パスにする。ルート直下だけに一致させない`**/`付きのルールは`**/`なし・ありの両方を置く。
+- `./`で始まるルートパスは、`:workspace_roots`配下の相対パスにする。`**/`付きのglobはワークスペース直下のファイルに一致しない可能性があるため、すべての`**/`付きのルールに`**/`なしの形も併記する（`.env`系以外も同様）。
 - skills: `.agents/skills/`に`.claude/skills/`配下へのシンボリックリンクを置く。Codexは`<project-root>/.agents/skills/<skill-name>/SKILL.md`を検索対象とし、`.claude/skills/`は対象に含まれないため。リンク先を実体とし、`.agents/skills/`側は編集しない。`.claude/skills/`にエントリを追加したときは、`.agents/skills/`にもリンクを追加する。DevinもDevin自身の`.devin/skills/`に加えて`.agents/skills/`を検索対象とする。
 - subagents: `.codex/agents/<name>.toml`に`.claude/agents/<name>.md`を変換して置く。Codexは1ファイル1エージェントのstandalone TOMLを要求し、mdをそのまま読めないためシンボリックリンクにできない。`.claude/agents/`を実体とし、`.codex/agents/`側は編集しない。変換規則は下記。
 - rules: `.claude/rules/*.md`は`.codex/hooks.json`のSessionStartフックで`.codex/hooks/load-claude-rules.sh`を実行し、本文を開発者コンテキストとして注入する。フックはリポジトリルートから`.claude/rules/`を再帰的に読み、frontmatterを除いた本文を出力する（`paths`付きのルールには「適用対象パス」を添える）。`.claude/rules/`を実体とし、Claude Codeへの影響を避けるため`AGENTS.md`への`@`取り込みや`AGENTS.override.md`の生成は使わない（`AGENTS.md`はClaude Codeも`CLAUDE.md`経由で読むため、取り込むとルールが二重に読まれる。`AGENTS.override.md`は同じディレクトリの`AGENTS.md`を置き換えるため、`AGENTS.md`の内容の複製が必要になる）。Codexの`rules/*.rules`はコマンド実行を制御するStarlarkで、指示文のruleとは別物。
@@ -125,7 +125,9 @@ Devinはリポジトリ内の`.claude/`配下を読むため、skills・subagent
 
 - `Bash(cmd arg *)`は`pattern = ["cmd", "arg"]`にする。`pattern`は引数列の完全なトークン単位の前方一致で、`*`は使えないため落とす。
 - `-f`と`--force`のように同じ位置で選択肢がある場合は、`["--force", "-f"]`のように1要素のリストで代替を表す。
-- 引数にglobを含むルール（`cat .env*`等）は表現できないため、`["cat", [".env", ".env.local", "key.properties"]]`のように具体的なファイル名に置き換える。ファイルパスのglobによる禁止は`config.toml`の`filesystem`で`deny`にする。
+- 引数にglobを含むルール（`cat .env*`等）は表現できないため、`["cat", [".env", "./.env", "mobile/.env.local", ...]]`のように具体的なファイル名に置き換える。リポジトリに存在する秘密情報ファイル（`.env`、`mobile/.env.local`、`mobile/android/key.properties`等）を、`./`付きの形も含めて列挙し、新しい秘密情報ファイルを追加したときは追記する。列挙していない名前（`cat path/to/.env`等）は一致しない。ファイルパスのglobによる禁止は`config.toml`の`filesystem`で`deny`にする（シェルコマンド経由の読み取りにも効くかは未確認）。
+- `Bash(git push --force*)`の`*`は`--force-with-lease`などの別名にも一致するため、`["--force", "--force-with-lease", "-f"]`と列挙する。
+- `pattern`は引数列の先頭からの前方一致で、位置を指定しない一致は表現できない。`git push origin feature --force`のようにフラグが引数の後ろに来る形は一致せず許可される（元のClaude側のルールも同じ挙動）。`cat`以外の読み取りコマンド（`head`・`less`等）は元のルールにも含まれず、変換もしていない。
 - 全ルールに`decision = "forbidden"`と`justification`（人間向けの理由）を付ける。
 - 全ルールに`match`と`not_match`の例を付ける。読み込み時に検証されるため、patternの誤りがその時点で分かる。
 - 複数のルールに一致した場合は`forbidden` > `prompt` > `allow`の順で最も厳しい決定が適用される。
