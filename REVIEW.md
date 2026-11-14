@@ -45,6 +45,7 @@
 - `.claude/agents/*.md` を変更したPRで、`python3 -I .codex/scripts/sync-agents.py --check` が差分なしで通る状態か（`.codex/agents/*.toml` が再生成されているか）。
 - `.claude/skills/` にスキルを追加したPRで、`.devin/skills/` と `.agents/skills/` に対応するシンボリックリンクがあるか。`.claude/agents/` への追加も同様に `.devin/agents/` を確認する。
 - `.devin/skills/`、`.devin/agents/`、`.agents/skills/` の各エントリと `.devin/mcp_config.json` が、コピーではなくシンボリックリンクのままか。
+- `.mcp.json` を変更したPRで、`.codex/config.toml` の `[mcp_servers.*]` が同じ内容に更新されているか。
 - `.claude/settings.json` の `permissions.deny` を変更したPRで、`.devin/config.json`、`.codex/config.toml`、`.codex/rules/deny.rules` が同じ内容に更新されているか。
 
 ## セキュリティ

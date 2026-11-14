@@ -32,3 +32,8 @@ extends = ":workspace"
 "**/secrets.json" = "deny"
 ".env.*" = "deny"
 "**/.env.*" = "deny"
+
+[mcp_servers.figma]
+command = "npx"
+args = ["-y", "figma-developer-mcp", "--stdio"]
+env_vars = ["FIGMA_API_KEY"]

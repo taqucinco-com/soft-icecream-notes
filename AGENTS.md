@@ -46,7 +46,7 @@ Claude Codeの`.claude/`配下を実体（正）とし、DevinとCodexはそこ�
 | `rules/*.md` | 対応なし（Devinが読むか未確認。必要な指示は`AGENTS.md`に書く） | `.codex/hooks.json`のSessionStartフックで注入 |
 | `settings.json`の`permissions.deny` | `.devin/config.json`（変換） | `.codex/config.toml`（パスのルール）、`.codex/rules/deny.rules`（コマンドのルール）（変換） |
 | `settings.ci.json`のhooks | 対象外（CI専用） | 対象外（CI専用） |
-| `.mcp.json` | `.devin/mcp_config.json`（シンボリックリンク）。Devin CLIは`.mcp.json`も直接読むことを確認済み（`env`の`${VAR}`展開とクラウド版は未確認） | 未対応 |
+| `.mcp.json` | `.devin/mcp_config.json`（シンボリックリンク）。Devin CLIは`.mcp.json`も直接読むことを確認済み（`env`の`${VAR}`展開とクラウド版は未確認） | `.codex/config.toml`の`[mcp_servers.<name>]`（変換） |
 | レビュー指針 | [REVIEW.md](./REVIEW.md) | [REVIEW.md](./REVIEW.md) |
 
 ### 指示の置き場所の判断
@@ -127,8 +127,18 @@ Devinは`read_config_from.claude`（既定で有効）により、Claude Code用
 - フックは初回に`/hooks`でレビュー・信頼が必要で、変更するとハッシュが変わり再レビューまでスキップされる。出力が既定約2,500トークンを超えると全文が保存されプレビューに置き換わるため、`additionalContextLimit`を設定している。
 - コマンド禁止: `.claude/settings.json`の`Bash(...)`のdenyルールは、Starlarkの`.codex/rules/deny.rules`に`prefix_rule(..., decision = "forbidden")`として置く。`config.toml`では表現できないため。`.claude/settings.json`の`permissions`を変更したときは`deny.rules`も同じ内容に更新する。変換規則は下記。
 - hooks: フックの定義は`.codex/hooks.json`に置く。同じ層に`hooks.json`と`config.toml`のインライン`[hooks]`の両方があるとマージされ起動時に警告が出る（"Prefer one representation per layer."）ため、`config.toml`には`[hooks]`を書かない。`.claude/settings.json`にはhooksが無く、`.claude/settings.ci.json`のhooks（`guard-subagent-sync.sh`・`guard-gh-single-command.sh`・`mark-ci-reply-posted.sh`・`require-ci-reply.sh`）はGitHub ActionsのClaude Code実行（`@claude`メンション）専用で、`CLAUDE_PROJECT_DIR`・Claude Codeの`tool_input.run_in_background`・CLAUDE.mdの応答ルールに依存するため、Codexには変換しない。
+- MCP: `.mcp.json`の`mcpServers`を、`.codex/config.toml`の`[mcp_servers.<name>]`に変換して置く。Codexは`.mcp.json`を読まず、MCPサーバーの定義は`config.toml`にしか書けないため。`.mcp.json`を実体とし、`.mcp.json`を変更したときは`config.toml`も同じ内容に更新する。変換規則は下記。
 - `default_permissions`と`[permissions]`は旧来の`sandbox_mode`と併用できず、読み込まれる設定に`sandbox_mode`が1つでもあると`default_permissions`は無視される。`sandbox_mode`は書かない。
 - Codexは信頼済みのプロジェクトでのみ`.codex/`を読む。
+
+### `.codex/config.toml`のMCPの変換規則
+
+- `command`・`args`はそのまま`command`・`args`にする。
+- `env`の値が同名の環境変数への参照（`"FIGMA_API_KEY": "${FIGMA_API_KEY}"`）の場合は、`env_vars = ["FIGMA_API_KEY"]`にする。`env_vars`はホストの環境変数を名前で転送するキーで、`${VAR}`の展開に頼らずに値を渡せる。Codexのドキュメントに`${VAR}`展開の記載は無い。
+- `env`の値がリテラルの場合は、`[mcp_servers.<name>.env]`に`KEY = "value"`として置く。秘密情報のリテラルはコミットしない。
+- 別名の環境変数への参照（`"A": "${B}"`）はCodexの`env_vars`で表現できないため、`env_vars`で`B`を転送するか、起動側で`A`を設定する。
+- 確認は`codex mcp list`で行う（`env`の値は伏せて表示される）。`codex mcp get`はドキュメントに記載が無い。
+- 次の点は未確認: プロジェクトの`.codex/config.toml`のMCPが`~/.codex/config.toml`とどう優先・マージされるか、実行環境にNode.js（`npx`）があるか、`codex mcp list`に出た`figma`がプロジェクトの`config.toml`由来か（`~/.codex/config.toml`にも同名の定義があれば区別できない）、実際にfigmaのツールが呼べるか。
 
 ### `.codex/rules/deny.rules`の変換規則
 
@@ -157,6 +167,7 @@ Devinは`read_config_from.claude`（既定で有効）により、Claude Code用
 
 リファレンス:
 
+- [Codex MCP](https://www.codex-docs.com/ja/docs/extend/mcp)（公式: [learn.chatgpt.com](https://learn.chatgpt.com/docs/extend/mcp)）
 - [Codex Rules](https://learn.chatgpt.com/docs/agent-configuration/rules)
 - [Codex Hooks](https://learn.chatgpt.com/codex/hooks)
 - [Codex AGENTS.md](https://learn.chatgpt.com/codex/agent-configuration/agents-md)
