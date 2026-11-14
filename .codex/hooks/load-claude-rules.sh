@@ -21,10 +21,34 @@ for f in "${files[@]}"; do
   echo
   echo "## $rel"
   awk '
+    function add_path(s) {
+      gsub(/^[ \t]+|[ \t]+$/, "", s)
+      gsub(/^["\x27]|["\x27]$/, "", s)
+      if (s != "") paths = paths (paths == "" ? "" : ", ") s
+    }
     NR == 1 && $0 == "---" { in_fm = 1; next }
     in_fm && $0 == "---" { in_fm = 0; next }
-    in_fm { fm = fm $0 "\n"; next }
-    !printed { if (fm ~ /(^|\n)paths:/) { gsub(/\n/, " ", fm); sub(/^paths: */, "", fm); print "適用対象パス: " fm; print "" } printed = 1 }
+    in_fm {
+      if ($0 ~ /^paths:/) {
+        in_paths = 1
+        v = $0
+        sub(/^paths:[ \t]*/, "", v)
+        gsub(/^\[|\]$/, "", v)
+        n = split(v, parts, ",")
+        for (k = 1; k <= n; k++) add_path(parts[k])
+      } else if (in_paths && $0 ~ /^[ \t]*-[ \t]+/) {
+        v = $0
+        sub(/^[ \t]*-[ \t]+/, "", v)
+        add_path(v)
+      } else if ($0 ~ /^[A-Za-z_-]+:/) {
+        in_paths = 0
+      }
+      next
+    }
+    !printed {
+      if (paths != "") { print "適用対象パス: " paths; print "" }
+      printed = 1
+    }
     { print }
   ' "$f"
 done
