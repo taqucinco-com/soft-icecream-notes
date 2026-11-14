@@ -1,0 +1,93 @@
+# prefix_rule はコマンドの引数列の前方一致で、位置を指定しない一致（引数の後ろに現れるフラグ、globを含むファイル名）は表現できない。
+# 一致しない形（例: git push origin feature --force）は許可される。ファイル名のglobによる禁止は config.toml の filesystem で行う。
+
+prefix_rule(
+    pattern = ["rm", ["-rf", "-fr"]],
+    decision = "forbidden",
+    justification = "再帰的な強制削除は禁止。削除対象を個別に確認してから通常のrmで実行すること。",
+    match = ["rm -rf build", "rm -fr build"],
+    not_match = ["rm file.txt"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", ["--force", "--force-with-lease", "-f"]],
+    decision = "forbidden",
+    justification = "強制pushは禁止。",
+    match = ["git push --force", "git push --force-with-lease origin feature", "git push -f origin feature"],
+    not_match = ["git push origin feature"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", "main", ["--force", "--force-with-lease", "-f"]],
+    decision = "forbidden",
+    justification = "mainへの強制pushは禁止。",
+    match = ["git push origin main --force", "git push origin main -f", "git push origin main --force-with-lease"],
+    not_match = ["git push origin main"],
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "作業ツリーの変更を破棄する操作は禁止。",
+    match = ["git reset --hard HEAD~1"],
+    not_match = ["git reset --soft HEAD~1"],
+)
+
+prefix_rule(
+    pattern = ["git", "clean", ["-fd", "-fdx"]],
+    decision = "forbidden",
+    justification = "未追跡ファイルの削除は禁止。",
+    match = ["git clean -fd", "git clean -fdx"],
+    not_match = ["git clean -n"],
+)
+
+prefix_rule(
+    pattern = ["git", "branch", "-D"],
+    decision = "forbidden",
+    justification = "ブランチの強制削除は禁止。",
+    match = ["git branch -D feature"],
+    not_match = ["git branch -d feature"],
+)
+
+prefix_rule(
+    pattern = ["sudo"],
+    decision = "forbidden",
+    justification = "sudoの実行は禁止。",
+    match = ["sudo ls"],
+    not_match = ["ls"],
+)
+
+prefix_rule(
+    pattern = ["chmod", "-R", "777"],
+    decision = "forbidden",
+    justification = "再帰的な777への権限変更は禁止。",
+    match = ["chmod -R 777 ."],
+    not_match = ["chmod 644 file"],
+)
+
+prefix_rule(
+    pattern = [
+        "cat",
+        [
+            ".env",
+            "./.env",
+            ".env.local",
+            "./.env.local",
+            ".env.sample",
+            ".env.production",
+            ".env.development",
+            "mobile/.env",
+            "mobile/.env.local",
+            "mobile/.env.sample",
+            "./mobile/.env.local",
+            "key.properties",
+            "mobile/android/key.properties",
+            "mobile/android/local.properties",
+            "mobile/android/_ci-debug.keystore",
+        ],
+    ],
+    decision = "forbidden",
+    justification = "秘密情報を含むファイルの内容表示は禁止。",
+    match = ["cat .env", "cat ./.env", "cat .env.production", "cat mobile/.env.local", "cat mobile/android/key.properties"],
+    not_match = ["cat README.md"],
+)

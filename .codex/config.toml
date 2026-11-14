@@ -1,0 +1,39 @@
+default_permissions = "project"
+
+[permissions.project]
+extends = ":workspace"
+
+[permissions.project.filesystem.":workspace_roots"]
+".env" = "deny"
+"**/.env" = "deny"
+".env.local" = "deny"
+"**/.env.local" = "deny"
+"*.pem" = "deny"
+"**/*.pem" = "deny"
+"*.key" = "deny"
+"**/*.key" = "deny"
+"*.p12" = "deny"
+"**/*.p12" = "deny"
+"*.jks" = "deny"
+"**/*.jks" = "deny"
+"*.keystore" = "deny"
+"**/*.keystore" = "deny"
+"key.properties" = "deny"
+"**/key.properties" = "deny"
+"local.properties" = "deny"
+"**/local.properties" = "deny"
+"google-services.json" = "deny"
+"**/google-services.json" = "deny"
+"GoogleService-Info.plist" = "deny"
+"**/GoogleService-Info.plist" = "deny"
+"secrets.yaml" = "deny"
+"**/secrets.yaml" = "deny"
+"secrets.json" = "deny"
+"**/secrets.json" = "deny"
+".env.*" = "deny"
+"**/.env.*" = "deny"
+
+[mcp_servers.figma]
+command = "npx"
+args = ["-y", "figma-developer-mcp", "--stdio"]
+env_vars = ["FIGMA_API_KEY"]

@@ -8,11 +8,13 @@ Claude Code固有のルール。プロジェクト概要やツールに依存し
 
 新機能や仕様変更を行う際は、コードに着手する前に以下のフローに従うこと。
 
-1. `/spec-init <feature-name> <一行概要>` — `specs/<feature-name>/` を作成する
-2. `/spec-requirements <feature-name>` — 要件定義書 (`requirements.md`) を作成する
-3. `/spec-design <feature-name>` — 技術設計書 (`design.md`) を作成する
-4. `/spec-tasks <feature-name>` — 設計をタスクリスト (`tasks.md`) に分解する
-5. `/spec-implement <feature-name> [task番号]` — タスクを1つずつ実装する
+1. 初期化（[spec-init](./.claude/rules/spec-init.md)）— `specs/<feature-name>/` を作成する
+2. 要件定義（[spec-requirements](./.claude/rules/spec-requirements.md)）— 要件定義書 (`requirements.md`) を作成する
+3. 設計（[spec-design](./.claude/rules/spec-design.md)）— 技術設計書 (`design.md`) を作成する
+4. タスク分解（[spec-tasks](./.claude/rules/spec-tasks.md)）— 設計をタスクリスト (`tasks.md`) に分解する
+5. 実装（[spec-implement](./.claude/rules/spec-implement.md)）— タスクを1つずつ実装する
+
+各フェーズの詳細な手順は上記のルールに定義されている。ルールは対応するファイル（`requirements.md`等）を扱うときに読み込まれるが、フェーズに着手する時点で対応するルールを必ず読むこと。
 
 運用ルール:
 
@@ -21,7 +23,6 @@ Claude Code固有のルール。プロジェクト概要やツールに依存し
 - `specs/` 以下の仕様書はコードと同様にレビュー・コミット対象として扱う。
 - 実装フェーズでは一度に1タスクのみ着手し、完了ごとに `tasks.md` を更新する。
 - 上記のフェーズごとの承認は対話セッションを前提としている。GitHub Actions上の`@claude`メンションのような、フェーズごとの往復ができない非対話ターンでは、代わりに`spec-driven-development-ci`skillの基準に従う。
-- `specs/adr/`は例外で、機能仕様（`specs/<feature-name>/`、requirements.md/design.md/tasks.mdの3点セット）ではなくADR（Architecture Decision Record）専用のディレクトリ。単一機能に閉じない横断的な設計判断を`specs/adr/yyyyMMddHHmm-<slug>.md`として記録する（例: [`specs/adr/202609191216-sandbox-filesystem-constraints.md`](./specs/adr/202609191216-sandbox-filesystem-constraints.md)）。タイムスタンプ方式を採用することで、複数の開発者が並行開発する際の番号競合を回避する。上記のフロー・3点セットの構造には従わない。
 
 ## コメント・ドキュメント記述のルール
 
