@@ -29,6 +29,12 @@ Claude Codeに検証させる場合は`flutter-ui-ios-verify`スキル（`.claud
 
 技術的な根拠がある場合（仕様・実装の参照等）はURLやドキュメント参照として残す。
 
+## ADR（Architecture Decision Record）
+
+`specs/adr/`は、単一機能に閉じない横断的な設計判断をADRとして記録するディレクトリ。機能仕様（`specs/<feature-name>/`、requirements.md/design.md/tasks.mdの3点セット）とは別物で、仕様駆動開発のフローや3点セットの構造には従わない。
+
+ファイル名は`yyyyMMddHHmm-<slug>.md`形式にする（例: [`specs/adr/202609191216-sandbox-filesystem-constraints.md`](./specs/adr/202609191216-sandbox-filesystem-constraints.md)）。連番（`0001`, `0002`, ...）ではなくタイムスタンプを使う理由は、複数の開発者が異なるブランチで並行開発する場合、マージ時に番号の競合が発生するのを回避するため。
+
 ## Devin・Codex連携の基本方針
 
 Claude Codeの`.claude/`配下を実体（正）とし、DevinとCodexはそこから派生させる。Claude Codeの設定・ファイルは、DevinやCodexに対応するために変更しない。派生物は`.claude/`側を変更したときに更新する（下記の対応表のとおり）。
@@ -37,11 +43,31 @@ Claude Codeの`.claude/`配下を実体（正）とし、DevinとCodexはそこ�
 |---|---|---|
 | `skills/<name>/` | `.devin/skills/<name>`（シンボリックリンク） | `.agents/skills/<name>`（シンボリックリンク） |
 | `agents/<name>.md` | `.devin/agents/<name>.md`（シンボリックリンク） | `.codex/agents/<name>.toml`（変換） |
-| `rules/*.md` | 対応なし（Devinが読むか未確認） | `.codex/hooks.json`のSessionStartフックで注入 |
+| `rules/*.md` | 対応なし（Devinが読むか未確認。必要な指示は`AGENTS.md`に書く） | `.codex/hooks.json`のSessionStartフックで注入 |
 | `settings.json`の`permissions.deny` | `.devin/config.json`（変換） | `.codex/config.toml`（パスのルール）、`.codex/rules/deny.rules`（コマンドのルール）（変換） |
 | `settings.ci.json`のhooks | 対象外（CI専用） | 対象外（CI専用） |
 | `.mcp.json` | Devinが直接読む | 未対応 |
 | レビュー指針 | [REVIEW.md](./REVIEW.md) | [REVIEW.md](./REVIEW.md) |
+
+### 指示の置き場所の判断
+
+指示をどのファイルに書くかは、読み込むツールで決める。
+
+| 指示の種類 | 置き場所 | 理由 |
+|---|---|---|
+| 全ツールで必要な共通ルール | `AGENTS.md` | Claude Code（`CLAUDE.md`の`@AGENTS.md`経由）、Codex、Devinのすべてが指示ファイルとして読む。`.claude/rules/`はDevinの読み込み対象に確認できていないため、Devinにも必要な指示は置かない。 |
+| Claude Code固有のルール | `CLAUDE.md` | 他ツールは読まない。 |
+| 特定のパスを扱うときだけ必要な指示（Claude Code・Codexで十分なもの） | `.claude/rules/*.md`（`paths`付き） | Claude Codeは一致するファイルを扱うときだけ読み込む。Codexは`.codex/hooks.json`のフックで注入する。 |
+| 引数を取り、ユーザーが明示的に呼ぶ手順 | `.claude/skills/<name>/SKILL.md` | `.claude/commands/`は非推奨で、スキルが後継。Devin・Codexにもシンボリックリンクで共有できる。 |
+
+### `.claude/commands/*.md`を`.claude/rules/`へ移行するときの変換
+
+- frontmatterの`description`・`argument-hint`は削除し、`paths`を付ける。Claude Codeが`.claude/rules/`で読むfrontmatterは`paths`だけで、`paths`の無いルールは毎セッション読み込まれる。
+- `paths`は、そのフェーズで扱うファイルに一致させる（例: `specs/*/design.md`）。対象のファイルがまだ存在しないフェーズのルールは自動では読み込まれないため、`CLAUDE.md`の手順から対象のルールを読むよう明示する。
+- `$ARGUMENTS`は置換されないため、`<feature-name>`のようなプレースホルダに書き換える。
+- `/コマンド名`で次の操作を案内していた文は、次のフェーズ名で案内する文に書き換える。
+- `CLAUDE.md`や他のスキルが`/コマンド名`を参照している場合は、`.claude/rules/`のファイルへのリンクに置き換える。
+- ルール内に「このコマンドでは〜を行わない」のような、他のルールと同時に読み込まれると矛盾する記述を残さない。同じ`paths`に一致するルールは同時に読み込まれる。
 
 リファレンス（Claude Code）:
 
