@@ -46,7 +46,7 @@ Claude Codeの`.claude/`配下を実体（正）とし、DevinとCodexはそこ�
 | `rules/*.md` | 対応なし（Devinが読むか未確認。必要な指示は`AGENTS.md`に書く） | `.codex/hooks.json`のSessionStartフックで注入 |
 | `settings.json`の`permissions.deny` | `.devin/config.json`（変換） | `.codex/config.toml`（パスのルール）、`.codex/rules/deny.rules`（コマンドのルール）（変換） |
 | `settings.ci.json`のhooks | 対象外（CI専用） | 対象外（CI専用） |
-| `.mcp.json` | Devinが直接読む | 未対応 |
+| `.mcp.json` | Devin CLIが直接読む（`env`の`${VAR}`展開とクラウド版は未確認） | 未対応 |
 | レビュー指針 | [REVIEW.md](./REVIEW.md) | [REVIEW.md](./REVIEW.md) |
 
 ### 指示の置き場所の判断
@@ -83,7 +83,11 @@ Devinは`read_config_from.claude`（既定で有効）により、Claude Code用
 - hooks: Devinが`.claude/settings.json`の`hooks`キーを読むため、`.devin/`側には何も置かない。`.claude/settings.json`にはhooksが無く、`.claude/settings.ci.json`（GitHub Actions専用）はファイル名が異なり読まれないため、Devinのセッションには`.claude/hooks/`のCI用ガードがかからない。これらはGitHub ActionsのClaude Code実行に依存するため意図した状態。Devinにガードが必要になった場合は`.devin/hooks.v1.json`に追加する。
 - 設定: `.devin/config.json`に`.claude/settings.json`の`permissions.deny`を変換して置く。変換規則は下記。
 - rules: `.claude/rules/`はDevinの読み込み対象（`read_config_from.claude`）に記載が見つからなかったため、Devin向けの対応はしていない。Devinにも読ませたい指示は`AGENTS.md`に書く。
-- MCP: Devinが`.mcp.json`を読むため、`.devin/mcp_config.json`は作らない。
+- MCP: Devin CLIは`read_config_from.claude`により`.mcp.json`を読むと明記されているため、`.devin/mcp_config.json`は作らない（Devin CLIの専用ファイルは`.devin/mcp_config.json`・`.devin/mcp_config.local.json`・`~/.config/devin/mcp_config.json`）。次の点は未確認:
+  - `.mcp.json`の`env`にある`${FIGMA_API_KEY}`を展開するか。Devinのドキュメントで展開の記法として確認できるのは`${env:VAR}`（コロン付き、記載があるのはOAuth関連のフィールド）のみで、`env`・`args`・`url`・`headers`で展開できるかは記載が無い。展開されない場合、文字列`${FIGMA_API_KEY}`がそのまま渡る。
+  - クラウド版Devinがリポジトリ直下の`.mcp.json`を読むか。クラウド版はWebのCustomize → MCPsで登録し、秘密情報はDevinのSecrets機能で渡す。pluginが持つMCPだけがplugin内の`.mcp.json`で宣言される。
+  - 実行環境にNode.js（`npx`）があるか。ドキュメントにNode.jsの要件の記載は無い。
+  - 確認する場合は、Devin CLIで`devin mcp list`・`devin mcp get figma`を実行し、`figma`が一覧に出るか、`env`の値が展開されているかを見る。出ない場合は`.devin/mcp_config.json`に同じ定義を置く。
 - レビュー: Devin Reviewは[REVIEW.md](./REVIEW.md)を参照する。
 
 `.claude/skills/`または`.claude/agents/`にエントリを追加したときは、対応するシンボリックリンクを`.devin/`側にも追加する。
@@ -103,6 +107,9 @@ Devinは`read_config_from.claude`（既定で有効）により、Claude Code用
 - [Devin Skills](https://docs.devin.ai/ja/product-guides/skills)
 - [Devin Subagents](https://docs.devin.ai/ja/cli/subagents)
 - [Devin Hooks](https://docs.devin.ai/ja/cli/extensibility/hooks/overview)
+- [Devin CLI MCP設定](https://docs.devin.ai/ja/cli/extensibility/mcp/configuration.md)
+- [Devin MCP（クラウド版Devinの接続）](https://docs.devin.ai/work-with-devin/mcp.md)
+- [Devin MCP Server（Devin自身をMCPサーバーとして公開する機能。`.mcp.json`の読み込みとは無関係）](https://docs.devin.ai/work-with-devin/devin-mcp)
 - [Devin read_config_from（Claude Codeの設定の読み込み）](https://docs.devin.ai/ja/cli/reference/configuration/read-config-from.md)
 - [Devin Configuration](https://docs.devin.ai/ja/cli/extensibility/configuration)
 - [Devin Review](https://docs.devin.ai/ja/work-with-devin/devin-review)
