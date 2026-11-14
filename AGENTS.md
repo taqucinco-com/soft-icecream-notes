@@ -29,6 +29,20 @@ Claude Codeに検証させる場合は`flutter-ui-ios-verify`スキル（`.claud
 
 技術的な根拠がある場合（仕様・実装の参照等）はURLやドキュメント参照として残す。
 
+## 秘密情報ファイルの取り扱い
+
+`.env`、`*.pem`、`*.key`、`key.properties` 等の秘密情報ファイルは、各ツールのパーミッション設定で読み取りがdenyになっている（実体は`.claude/settings.json`の`permissions.deny`。`.devin/config.json`・`.codex/config.toml`等はそこからの派生）。エージェントはこれらのファイルの内容を取得しようとしてはならない。
+
+コマンド文字列ベースのdenyルールは`f='.''env'; cat "$f"`のようなファイル名の分割・変数参照で回避できてしまうが、回避が可能であることと読んでよいことは別。以下を含むあらゆる手段でdeny対象ファイルの内容を取得・出力しないこと。
+
+- ファイル名の分割・変数・コマンド置換による難読化（例: `f='.''env'`、`cat .''env`）
+- コピー・シンボリックリンク・アーカイブ（`cp`/`ln`/`tar`等）経由の間接的な読み取り
+- `git show`等、別オブジェクト経由での内容取得
+
+秘密情報の値そのものが必要になった場合は、ファイルを読まずユーザーに確認する。設定の有無を確認したいだけの場合は、値ではなくキー名の一覧やファイルの存在確認に留める。
+
+なおこの節はエージェントの振る舞いを定めるルールであり、技術的な強制ではない。OSレベルでdeny対象パスを隠すには、Devinの`--sandbox`起動（[Devin Sandbox](https://docs.devin.ai/ja/cli/sandbox)）のような仕組みが必要。
+
 ## ADR（Architecture Decision Record）
 
 `specs/adr/`は、単一機能に閉じない横断的な設計判断をADRとして記録するディレクトリ。機能仕様（`specs/<feature-name>/`、requirements.md/design.md/tasks.mdの3点セット）とは別物で、仕様駆動開発のフローや3点セットの構造には従わない。
