@@ -76,14 +76,14 @@ Claude Codeの`.claude/`配下を実体（正）とし、DevinとCodexはそこ�
 
 ## Devin連携
 
-Devinはリポジトリ内の`.claude/`配下を読むため、skills・subagents・hooksの実体は`.claude/`に一本化する。
+Devinは`read_config_from.claude`（既定で有効）により、Claude Code用の設定の一部を直接読む。ドキュメントで読み込みが明記されているのは、`CLAUDE.md`、`.claude/skills/`、`.claude/commands/`、`.claude/settings.json`・`.claude/settings.local.json`の`hooks`と MCPサーバー、`.mcp.json`。`.claude/agents/`・`.claude/rules/`・`permissions`を読むという記載は無いため、これらは`.devin/`側に派生させるか、対応しない。Claude由来の設定と`.devin/`の設定が衝突した場合の優先順位は記載が無く、未確認。
 
 - skills: `.devin/skills/`に`.claude/skills/`配下へのシンボリックリンクを置く。リンク先を実体とし、`.devin/skills/`側は編集しない。
 - subagents: `.devin/agents/`に`.claude/agents/`配下へのシンボリックリンクを置く。Devinのsubagentsは`.devin/agents/`を検索対象とし`.claude/agents/`は対象に含まれないため。
-- hooks: Devinが`.claude/`の設定を読むため、`.devin/`側には何も置かない。
+- hooks: Devinが`.claude/settings.json`の`hooks`キーを読むため、`.devin/`側には何も置かない。`.claude/settings.json`にはhooksが無く、`.claude/settings.ci.json`（GitHub Actions専用）はファイル名が異なり読まれないため、Devinのセッションには`.claude/hooks/`のCI用ガードがかからない。これらはGitHub ActionsのClaude Code実行に依存するため意図した状態。Devinにガードが必要になった場合は`.devin/hooks.v1.json`に追加する。
 - 設定: `.devin/config.json`に`.claude/settings.json`の`permissions.deny`を変換して置く。変換規則は下記。
 - rules: `.claude/rules/`はDevinの読み込み対象（`read_config_from.claude`）に記載が見つからなかったため、Devin向けの対応はしていない。Devinにも読ませたい指示は`AGENTS.md`に書く。
-- MCP: `.mcp.json`をDevinが読むため、`.devin/mcp_config.json`は作らない。
+- MCP: Devinが`.mcp.json`を読むため、`.devin/mcp_config.json`は作らない。
 - レビュー: Devin Reviewは[REVIEW.md](./REVIEW.md)を参照する。
 
 `.claude/skills/`または`.claude/agents/`にエントリを追加したときは、対応するシンボリックリンクを`.devin/`側にも追加する。
@@ -103,6 +103,7 @@ Devinはリポジトリ内の`.claude/`配下を読むため、skills・subagent
 - [Devin Skills](https://docs.devin.ai/ja/product-guides/skills)
 - [Devin Subagents](https://docs.devin.ai/ja/cli/subagents)
 - [Devin Hooks](https://docs.devin.ai/ja/cli/extensibility/hooks/overview)
+- [Devin read_config_from（Claude Codeの設定の読み込み）](https://docs.devin.ai/ja/cli/reference/configuration/read-config-from.md)
 - [Devin Configuration](https://docs.devin.ai/ja/cli/extensibility/configuration)
 - [Devin Review](https://docs.devin.ai/ja/work-with-devin/devin-review)
 
