@@ -137,13 +137,14 @@ Devinはリポジトリ内の`.claude/`配下を読むため、skills・subagent
 
 ### `.codex/agents/`の変換手順
 
-`.claude/agents/<name>.md`を追加・変更したときは、対応する`.codex/agents/<name>.toml`を次の規則で作り直す。
+`.claude/agents/<name>.md`を追加・変更したときは、`python3 -I .codex/scripts/sync-agents.py`を実行して`.codex/agents/<name>.toml`を再生成する。`--check`を付けると、書き込まずに差分があれば終了コード1で終わる（`.claude/agents/`に対応するmdが無い`.toml`も差分として報告する）。`.codex/agents/`は生成物のため手で編集しない。
+
+スクリプトの変換規則:
 
 1. frontmatterの`name`を`name`に、`description`を`description`にそのまま入れる。ファイル名は`<name>.toml`とする（Codexは識別にファイル名ではなく`name`を使うが、一致させるのが最も単純な規約のため）。
 2. frontmatter以降の本文を、TOMLのリテラル複数行文字列（`'''`）で`developer_instructions`に入れる。本文にバックスラッシュやバッククォートが多く、`"""`だと文字がエスケープされるため。本文に`'''`が含まれる場合は`"""`に切り替えてエスケープする。
-3. frontmatterの`tools`は変換先が無いため捨てる。Codexのカスタムエージェントは`sandbox_mode`・`approval_policy`・`mcp_servers`をファイルで上書きできず、親セッションの設定を継承する。読み取り専用の制限は、本文の「副作用を伴う操作を行わない」という指示に委ねる（`developer_instructions`は編集を避けるよう頼めるだけで、読み取り専用サンドボックスにはならない）。
+3. frontmatterの`tools`は`Read`・`Grep`・`Glob`のみの場合に限り、本文の末尾に「ファイルの読み取りと検索のみを行い、編集・コマンド実行・外部への書き込みを行わない」という注記を追加する。Codexのカスタムエージェントは`sandbox_mode`・`approval_policy`・`mcp_servers`をファイルで上書きできず、親セッションの設定を継承するため、読み取り専用の制限は指示文でしか表現できない（`developer_instructions`は編集を避けるよう頼めるだけで、読み取り専用サンドボックスにはならない）。それ以外の`tools`は変換先が無いため捨てる。
 4. `model`等の任意キーは設定しない（Claude側にも対応する指定が無いため）。
-5. 変換後に`tomllib`でパースし、`name`・`description`・本文が元のmdと一致することを確認する。
 
 リファレンス:
 

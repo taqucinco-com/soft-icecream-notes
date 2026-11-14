@@ -94,4 +94,8 @@ developer_instructions = '''
 - `complexity`: `simple` / `standard` / `advanced` のいずれか。
 - `model`: `haiku` / `sonnet` / `opus` のいずれか。
 - `reason`: 判定理由を簡潔に説明（50字程度）。
+
+## 使用できる操作の制限
+
+このエージェントが使ってよい操作は、ファイルの読み取りと検索（`Read`・`Grep`・`Glob`相当）のみ。ファイルの編集・作成・削除、コマンドの実行、外部サービスへの書き込みは行わない。
 '''
