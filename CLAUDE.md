@@ -8,11 +8,13 @@ Claude Code固有のルール。プロジェクト概要やツールに依存し
 
 新機能や仕様変更を行う際は、コードに着手する前に以下のフローに従うこと。
 
-1. `/spec-init <feature-name> <一行概要>` — `specs/<feature-name>/` を作成する
-2. `/spec-requirements <feature-name>` — 要件定義書 (`requirements.md`) を作成する
-3. `/spec-design <feature-name>` — 技術設計書 (`design.md`) を作成する
-4. `/spec-tasks <feature-name>` — 設計をタスクリスト (`tasks.md`) に分解する
-5. `/spec-implement <feature-name> [task番号]` — タスクを1つずつ実装する
+1. 初期化（[spec-init](./.claude/rules/spec-init.md)）— `specs/<feature-name>/` を作成する
+2. 要件定義（[spec-requirements](./.claude/rules/spec-requirements.md)）— 要件定義書 (`requirements.md`) を作成する
+3. 設計（[spec-design](./.claude/rules/spec-design.md)）— 技術設計書 (`design.md`) を作成する
+4. タスク分解（[spec-tasks](./.claude/rules/spec-tasks.md)）— 設計をタスクリスト (`tasks.md`) に分解する
+5. 実装（[spec-implement](./.claude/rules/spec-implement.md)）— タスクを1つずつ実装する
+
+各フェーズの詳細な手順は上記のルールに定義されている。ルールは対応するファイル（`requirements.md`等）を扱うときに読み込まれるが、フェーズに着手する時点で対応するルールを必ず読むこと。
 
 運用ルール:
 

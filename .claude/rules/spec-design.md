@@ -1,11 +1,13 @@
 ---
-description: 承認済みの要件定義から技術設計書(design.md)を作成する
-argument-hint: <feature-name>
+paths:
+  - "specs/*/design.md"
 ---
 
-前提: `specs/$ARGUMENTS/requirements.md` がユーザー承認済みであること。未承認・未作成なら先にそちらを完了するよう促し、このコマンドの本処理は行わない。
+# 仕様駆動開発: 設計フェーズ
 
-対象: `specs/$ARGUMENTS/design.md`
+前提: `specs/<feature-name>/requirements.md` がユーザー承認済みであること。未承認・未作成なら先に要件定義フェーズを完了するよう促し、このフェーズの本処理は行わない。
+
+対象: `specs/<feature-name>/design.md`
 
 手順:
 
@@ -18,4 +20,4 @@ argument-hint: <feature-name>
    - 検討したが採用しなかった代替案・既知のリスク
 3. 前提となる技術スタックが未確定な場合は、推測せずユーザーに確認する。
 4. 書き終えたら内容を要約して提示し、ユーザーの承認を得る。
-5. 承認後は `/spec-tasks $ARGUMENTS` の実行を案内する。
+5. 承認後はタスク分解フェーズ（`tasks.md` の作成）に進むようユーザーに案内する。

@@ -1,9 +1,11 @@
 ---
-description: tasks.mdの未着手タスクを1つ実装する
-argument-hint: <feature-name> [task番号やキーワード]
+paths:
+  - "specs/*/tasks.md"
 ---
 
-対象: `specs/$ARGUMENTS` の `tasks.md`
+# 仕様駆動開発: 実装フェーズ
+
+対象: `specs/<feature-name>/tasks.md` の未着手タスク
 
 手順:
 
