@@ -10,7 +10,8 @@
 
 - Dartの[dot shorthand構文](https://dart.dev/language/dot-shorthands)（`.fromSeed(...)` のように型名を省略する記法）は意図したスタイルであり、コンパイルエラーではない。指摘しない。
 - 自動生成ファイル（`*.g.dart`、`*.freezed.dart`、`pubspec.lock`、`mobile/ios/Podfile.lock` 等）の中身。
-- `.devin/agents/`、`.devin/skills/` 配下のシンボリックリンク。実体は `.claude/agents/`、`.claude/skills/` にあり、そちらをレビュー対象とする。
+- `.devin/skills/`、`.devin/agents/`、`.agents/skills/` 配下のシンボリックリンク。実体は `.claude/skills/`、`.claude/agents/` にあり、そちらをレビュー対象とする。
+- `.codex/agents/*.toml` のプロンプト本文。`.claude/agents/*.md` から `.codex/scripts/sync-agents.py` で生成されるため、内容の重複は指摘しない。元の md との差分は下記の「他ツールへの派生」で確認する。
 
 ## 重点的に確認する領域
 
@@ -36,6 +37,15 @@
 - workflowの権限（`permissions`）を広げる変更は、必要な理由が明確か。
 - `.claude/settings*.json` やhooksの変更で、許可範囲が意図せず広がっていないか。
 - `@claude` 応答まわりの変更は、CLAUDE.mdの「GitHub Actions（@claudeメンション）での応答ルール」と矛盾していないか。
+
+### 他ツール（Devin・Codex）への派生
+
+`.claude/` を実体とし、DevinとCodexの設定はそこから派生させる（詳細は [AGENTS.md](./AGENTS.md) の「Devin・Codex連携」）。
+
+- `.claude/agents/*.md` を変更したPRで、`python3 -I .codex/scripts/sync-agents.py --check` が差分なしで通る状態か（`.codex/agents/*.toml` が再生成されているか）。
+- `.claude/skills/` にスキルを追加したPRで、`.devin/skills/` と `.agents/skills/` に対応するシンボリックリンクがあるか。`.claude/agents/` への追加も同様に `.devin/agents/` を確認する。
+- `.devin/skills/`、`.devin/agents/`、`.agents/skills/` の各エントリが、コピーではなくシンボリックリンクのままか。
+- `.claude/settings.json` の `permissions.deny` を変更したPRで、`.devin/config.json`、`.codex/config.toml`、`.codex/rules/deny.rules` が同じ内容に更新されているか。
 
 ## セキュリティ
 
