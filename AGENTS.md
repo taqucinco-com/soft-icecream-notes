@@ -53,7 +53,7 @@ Claude Codeに検証させる場合は`flutter-ui-ios-verify`スキル（`.claud
 
 Claude Codeの`.claude/`配下を実体（正）とし、DevinとCodexはそこから派生させる。Claude Codeの設定・ファイルは、DevinやCodexに対応するために変更しない。
 
-派生物（`.devin/`・`.codex/`・`.agents/`）の生成は、`sync-devin-codex`プラグイン（マーケットプレイス: [taqucinco-com/plugin-marketplace](https://github.com/taqucinco-com/plugin-marketplace)、`.claude/settings.json`の`extraKnownMarketplaces`・`enabledPlugins`で有効化）の`sync`スキルを使う。`.claude/`側を変更したときは`/sync-devin-codex:sync`を実行して派生物を更新する。変換対象・変換規則・未確認事項はプラグインの`references/conversion-rules.md`が一次情報源で、ここでは重複して定義しない。派生物は手で編集しない。Devin Reviewは[REVIEW.md](./REVIEW.md)を参照する。
+派生物（`.devin/`・`.codex/`・`.agents/`）の生成は、`sync-devin-codex`プラグイン（マーケットプレイス: [taqucinco-com/plugin-marketplace](https://github.com/taqucinco-com/plugin-marketplace)、`.claude/settings.json`の`extraKnownMarketplaces`・`enabledPlugins`で有効化）の`sync`スキルを使う。`.claude/`側を変更したときは`/sync-devin-codex:sync`を実行して派生物を更新する。変換対象・変換規則・未確認事項はプラグインの`references/conversion-rules.md`が一次情報源で、ここでは重複して定義しない。派生物は手で編集しない。ただし`.devin/global_rules.md`は手書きの実体で、Devinの`.devin/config.json`に変換しない`permissions.deny`のルールを書く（同期スキルが読んで`--skip-deny`に渡す）。Devin Reviewは[REVIEW.md](./REVIEW.md)を参照する。
 
 ### 指示の置き場所の判断
 
@@ -63,6 +63,7 @@ Claude Codeの`.claude/`配下を実体（正）とし、DevinとCodexはそこ�
 |---|---|---|
 | 全ツールで必要な共通ルール | `AGENTS.md` | Claude Code（`CLAUDE.md`の`@AGENTS.md`経由）、Codex、Devinのすべてが指示ファイルとして読む。`.claude/rules/`はDevinの読み込み対象に確認できていないため、Devinにも必要な指示は置かない。 |
 | Claude Code固有のルール | `CLAUDE.md` | 他ツールは読まない。 |
+| Devin固有のルール | `.devin/global_rules.md` | Devinが常時読み込む単一ファイル（[Devin Rules](https://docs.devin.ai/ja/cli/extensibility/rules#rules-in-the-devin-directory)）。Devin専用であることが場所から分かる。 |
 | 特定のパスを扱うときだけ必要な指示（Claude Code・Codexで十分なもの） | `.claude/rules/*.md`（`paths`付き） | Claude Codeは一致するファイルを扱うときだけ読み込む。Codexは`.codex/hooks.json`のフックで注入する。 |
 | 引数を取り、ユーザーが明示的に呼ぶ手順 | `.claude/skills/<name>/SKILL.md` | `.claude/commands/`は非推奨で、スキルが後継。Devin・Codexにもシンボリックリンクで共有できる。 |
 
