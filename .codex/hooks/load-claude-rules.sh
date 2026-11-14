@@ -20,14 +20,15 @@ for f in "${files[@]}"; do
   rel="${f#"$root"/}"
   echo
   echo "## $rel"
-  awk '
+  # CRLF を LF にそろえてから処理する（frontmatter の判定が崩れないようにする）
+  tr -d '\r' < "$f" | awk '
     function add_path(s) {
       gsub(/^[ \t]+|[ \t]+$/, "", s)
       gsub(/^["\x27]|["\x27]$/, "", s)
       if (s != "") paths = paths (paths == "" ? "" : ", ") s
     }
-    NR == 1 && $0 == "---" { in_fm = 1; next }
-    in_fm && $0 == "---" { in_fm = 0; next }
+    NR == 1 && $0 ~ /^---[ \t]*$/ { in_fm = 1; next }
+    in_fm && $0 ~ /^---[ \t]*$/ { in_fm = 0; next }
     in_fm {
       if ($0 ~ /^paths:/) {
         in_paths = 1
@@ -50,5 +51,5 @@ for f in "${files[@]}"; do
       printed = 1
     }
     { print }
-  ' "$f"
+  '
 done

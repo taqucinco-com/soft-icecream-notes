@@ -17,9 +17,7 @@
       "Read(**/secrets.yaml)",
       "Read(**/secrets.json)",
       "Write(./.env)",
-      "Write(./.env.*)",
       "Write(**/.env)",
-      "Write(**/.env.*)",
       "Write(**/*.pem)",
       "Write(**/*.key)",
       "Write(**/*.p12)",
@@ -31,19 +29,16 @@
       "Write(**/GoogleService-Info.plist)",
       "Write(**/secrets.yaml)",
       "Write(**/secrets.json)",
-      "Exec(rm -rf)",
-      "Exec(rm -fr)",
+      "Exec(cat .env)",
+      "Exec(cat .env.sample)",
+      "Exec(cat mobile/.env.local)",
+      "Exec(cat mobile/.env.sample)",
+      "Exec(cat mobile/android/_ci-debug.keystore)",
       "Exec(git push --force)",
       "Exec(git push -f)",
       "Exec(git push origin main --force)",
-      "Exec(git reset --hard)",
-      "Exec(git clean -fd)",
-      "Exec(git branch -D)",
       "Exec(sudo)",
-      "Exec(chmod -R 777)",
-      "Exec(cat .env)",
-      "Exec(cat .env.local)",
-      "Exec(cat key.properties)"
+      "Exec(chmod -R 777)"
     ]
   }
 }

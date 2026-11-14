@@ -1,93 +1,106 @@
-# prefix_rule はコマンドの引数列の前方一致で、位置を指定しない一致（引数の後ろに現れるフラグ、globを含むファイル名）は表現できない。
-# 一致しない形（例: git push origin feature --force）は許可される。ファイル名のglobによる禁止は config.toml の filesystem で行う。
+# sync-devin-codex が .claude/settings.json の permissions.deny から生成した。手で編集しない。
+# prefix_rule は引数列の前方一致で、位置を指定しない一致（引数の後ろに現れるフラグ等）は表現できない。
+# ファイル読み取りコマンドのglobは、同期時点で存在するファイル名に展開している。新しい秘密情報ファイルを追加したら再同期する。
 
 prefix_rule(
-    pattern = ["rm", ["-rf", "-fr"]],
+    pattern = ["cat", [".env", ".env.sample", "./.env", "./.env.sample"]],
     decision = "forbidden",
-    justification = "再帰的な強制削除は禁止。削除対象を個別に確認してから通常のrmで実行すること。",
-    match = ["rm -rf build", "rm -fr build"],
-    not_match = ["rm file.txt"],
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(cat .env*)",
+    match = ["cat .env"],
+    not_match = ["cat README.md"],
 )
 
 prefix_rule(
-    pattern = ["git", "push", ["--force", "--force-with-lease", "-f"]],
+    pattern = ["cat", [".env", ".env.sample", "mobile/.env.local", "mobile/.env.sample", "./.env", "./.env.sample", "./mobile/.env.local", "./mobile/.env.sample"]],
     decision = "forbidden",
-    justification = "強制pushは禁止。",
-    match = ["git push --force", "git push --force-with-lease origin feature", "git push -f origin feature"],
-    not_match = ["git push origin feature"],
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(cat **/.env*)",
+    match = ["cat .env"],
+    not_match = ["cat README.md"],
 )
 
 prefix_rule(
-    pattern = ["git", "push", "origin", "main", ["--force", "--force-with-lease", "-f"]],
+    pattern = ["cat", ["mobile/android/_ci-debug.keystore", "./mobile/android/_ci-debug.keystore"]],
     decision = "forbidden",
-    justification = "mainへの強制pushは禁止。",
-    match = ["git push origin main --force", "git push origin main -f", "git push origin main --force-with-lease"],
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(cat **/*.keystore)",
+    match = ["cat mobile/android/_ci-debug.keystore"],
+    not_match = ["cat README.md"],
+)
+
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "forbidden",
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(rm -rf *)",
+    match = ["rm -rf"],
+    not_match = ["rm"],
+)
+
+prefix_rule(
+    pattern = ["rm", "-fr"],
+    decision = "forbidden",
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(rm -fr *)",
+    match = ["rm -fr"],
+    not_match = ["rm"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--force"],
+    decision = "forbidden",
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(git push --force*)",
+    match = ["git push --force"],
+    not_match = ["git push"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "-f"],
+    decision = "forbidden",
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(git push -f*)",
+    match = ["git push -f"],
+    not_match = ["git push"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", "main", "--force"],
+    decision = "forbidden",
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(git push origin main --force*)",
+    match = ["git push origin main --force"],
     not_match = ["git push origin main"],
 )
 
 prefix_rule(
     pattern = ["git", "reset", "--hard"],
     decision = "forbidden",
-    justification = "作業ツリーの変更を破棄する操作は禁止。",
-    match = ["git reset --hard HEAD~1"],
-    not_match = ["git reset --soft HEAD~1"],
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(git reset --hard*)",
+    match = ["git reset --hard"],
+    not_match = ["git reset"],
 )
 
 prefix_rule(
-    pattern = ["git", "clean", ["-fd", "-fdx"]],
+    pattern = ["git", "clean", "-fd"],
     decision = "forbidden",
-    justification = "未追跡ファイルの削除は禁止。",
-    match = ["git clean -fd", "git clean -fdx"],
-    not_match = ["git clean -n"],
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(git clean -fd*)",
+    match = ["git clean -fd"],
+    not_match = ["git clean"],
 )
 
 prefix_rule(
     pattern = ["git", "branch", "-D"],
     decision = "forbidden",
-    justification = "ブランチの強制削除は禁止。",
-    match = ["git branch -D feature"],
-    not_match = ["git branch -d feature"],
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(git branch -D*)",
+    match = ["git branch -D"],
+    not_match = ["git branch"],
 )
 
 prefix_rule(
     pattern = ["sudo"],
     decision = "forbidden",
-    justification = "sudoの実行は禁止。",
-    match = ["sudo ls"],
-    not_match = ["ls"],
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(sudo *)",
+    match = ["sudo"],
 )
 
 prefix_rule(
     pattern = ["chmod", "-R", "777"],
     decision = "forbidden",
-    justification = "再帰的な777への権限変更は禁止。",
-    match = ["chmod -R 777 ."],
-    not_match = ["chmod 644 file"],
-)
-
-prefix_rule(
-    pattern = [
-        "cat",
-        [
-            ".env",
-            "./.env",
-            ".env.local",
-            "./.env.local",
-            ".env.sample",
-            ".env.production",
-            ".env.development",
-            "mobile/.env",
-            "mobile/.env.local",
-            "mobile/.env.sample",
-            "./mobile/.env.local",
-            "key.properties",
-            "mobile/android/key.properties",
-            "mobile/android/local.properties",
-            "mobile/android/_ci-debug.keystore",
-        ],
-    ],
-    decision = "forbidden",
-    justification = "秘密情報を含むファイルの内容表示は禁止。",
-    match = ["cat .env", "cat ./.env", "cat .env.production", "cat mobile/.env.local", "cat mobile/android/key.properties"],
-    not_match = ["cat README.md"],
+    justification = "Claude Codeの permissions.deny に合わせて禁止: Bash(chmod -R 777*)",
+    match = ["chmod -R 777"],
+    not_match = ["chmod -R"],
 )
