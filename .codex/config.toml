@@ -1,5 +1,8 @@
+# >>> sync-devin-codex (permissions) >>>
 default_permissions = "project"
+# <<< sync-devin-codex (permissions) <<<
 
+# >>> sync-devin-codex (permissions-tables) >>>
 [permissions.project]
 extends = ":workspace"
 
@@ -32,8 +35,11 @@ extends = ":workspace"
 "**/secrets.json" = "deny"
 ".env.*" = "deny"
 "**/.env.*" = "deny"
+# <<< sync-devin-codex (permissions-tables) <<<
 
+# >>> sync-devin-codex (mcp-servers) >>>
 [mcp_servers.figma]
 command = "npx"
 args = ["-y", "figma-developer-mcp", "--stdio"]
 env_vars = ["FIGMA_API_KEY"]
+# <<< sync-devin-codex (mcp-servers) <<<

@@ -1,6 +1,8 @@
 {
   "permissions": {
     "deny": [
+      "Exec(cat .env.local)",
+      "Exec(cat key.properties)",
       "Read(./.env)",
       "Read(./.env.local)",
       "Read(**/.env)",
@@ -31,6 +33,11 @@
       "Write(**/GoogleService-Info.plist)",
       "Write(**/secrets.yaml)",
       "Write(**/secrets.json)",
+      "Exec(cat .env)",
+      "Exec(cat .env.sample)",
+      "Exec(cat mobile/.env.local)",
+      "Exec(cat mobile/.env.sample)",
+      "Exec(cat mobile/android/_ci-debug.keystore)",
       "Exec(rm -rf)",
       "Exec(rm -fr)",
       "Exec(git push --force)",
@@ -40,10 +47,7 @@
       "Exec(git clean -fd)",
       "Exec(git branch -D)",
       "Exec(sudo)",
-      "Exec(chmod -R 777)",
-      "Exec(cat .env)",
-      "Exec(cat .env.local)",
-      "Exec(cat key.properties)"
+      "Exec(chmod -R 777)"
     ]
   }
 }
