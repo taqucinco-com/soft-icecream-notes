@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:icecream_log/features/profile/application/di/usecase_providers.dart';
@@ -48,7 +49,7 @@ class SettingsScreen extends ConsumerWidget {
   }
 }
 
-class _SettingsContent extends StatefulWidget {
+class _SettingsContent extends HookWidget {
   const _SettingsContent({
     required this.profile,
     required this.appVersion,
@@ -62,29 +63,16 @@ class _SettingsContent extends StatefulWidget {
   final VoidCallback onChangeIconTap;
 
   @override
-  State<_SettingsContent> createState() => _SettingsContentState();
-}
-
-class _SettingsContentState extends State<_SettingsContent> {
-  late final TextEditingController _controller = TextEditingController(
-    text: widget.profile.nickname,
-  );
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submitNickname() {
-    final trimmed = _controller.text.trim();
-    if (trimmed != widget.profile.nickname) {
-      widget.onNicknameChanged(trimmed);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final controller = useTextEditingController(text: profile.nickname);
+
+    void submitNickname() {
+      final trimmed = controller.text.trim();
+      if (trimmed != profile.nickname) {
+        onNicknameChanged(trimmed);
+      }
+    }
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -104,7 +92,7 @@ class _SettingsContentState extends State<_SettingsContent> {
               ),
               const SizedBox(height: 8),
               TextButton(
-                onPressed: widget.onChangeIconTap,
+                onPressed: onChangeIconTap,
                 child: const Text('アイコンを変更'),
               ),
             ],
@@ -114,18 +102,18 @@ class _SettingsContentState extends State<_SettingsContent> {
         const Text('ニックネーム', style: TextStyle(fontSize: 13)),
         const SizedBox(height: 8),
         TextField(
-          controller: _controller,
+          controller: controller,
           decoration: const InputDecoration(
             isDense: true,
             border: OutlineInputBorder(),
           ),
-          onSubmitted: (_) => _submitNickname(),
-          onTapOutside: (_) => _submitNickname(),
+          onSubmitted: (_) => submitNickname(),
+          onTapOutside: (_) => submitNickname(),
         ),
         const SizedBox(height: 24),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [const Text('アプリバージョン'), Text(widget.appVersion)],
+          children: [const Text('アプリバージョン'), Text(appVersion)],
         ),
         const Divider(height: 32),
       ],

@@ -1,32 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'package:icecream_log/features/memo/application/providers/memo_edit.dart';
 
 /// Figma 03フレームの「感想（箇条書き）」欄。追加・削除ができる。
-class ImpressionListEditor extends ConsumerStatefulWidget {
+class ImpressionListEditor extends HookConsumerWidget {
   const ImpressionListEditor({super.key});
 
   @override
-  ConsumerState<ImpressionListEditor> createState() =>
-      _ImpressionListEditorState();
-}
-
-class _ImpressionListEditorState extends ConsumerState<ImpressionListEditor> {
-  final _controller = TextEditingController();
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final impressions = ref.watch(
       memoEditProvider.select((state) => state.impressions),
     );
     final notifier = ref.read(memoEditProvider.notifier);
+    final controller = useTextEditingController();
+
+    void submit(String text) {
+      notifier.addImpression(text);
+      controller.clear();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,26 +45,21 @@ class _ImpressionListEditorState extends ConsumerState<ImpressionListEditor> {
           children: [
             Expanded(
               child: TextField(
-                controller: _controller,
+                controller: controller,
                 decoration: const InputDecoration(
                   isDense: true,
                   hintText: '感想を追加',
                 ),
-                onSubmitted: _submit,
+                onSubmitted: submit,
               ),
             ),
             IconButton(
               icon: const Icon(Icons.add),
-              onPressed: () => _submit(_controller.text),
+              onPressed: () => submit(controller.text),
             ),
           ],
         ),
       ],
     );
-  }
-
-  void _submit(String text) {
-    ref.read(memoEditProvider.notifier).addImpression(text);
-    _controller.clear();
   }
 }

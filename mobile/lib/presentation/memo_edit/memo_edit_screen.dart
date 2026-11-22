@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:icecream_log/features/memo/application/providers/memo_edit.dart';
@@ -103,7 +104,7 @@ class _PhotoPicker extends StatelessWidget {
   }
 }
 
-class _ServingMachinePicker extends StatefulWidget {
+class _ServingMachinePicker extends HookWidget {
   const _ServingMachinePicker({
     required this.selected,
     required this.onSelected,
@@ -112,38 +113,20 @@ class _ServingMachinePicker extends StatefulWidget {
   final String? selected;
   final ValueChanged<String> onSelected;
 
-  @override
-  State<_ServingMachinePicker> createState() => _ServingMachinePickerState();
-}
-
-class _ServingMachinePickerState extends State<_ServingMachinePicker> {
-  late final TextEditingController _controller;
-
   bool get _isCustom =>
-      widget.selected != null &&
-      !ServingMachine.presetValues.contains(widget.selected);
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = TextEditingController(text: widget.selected);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+      selected != null && !ServingMachine.presetValues.contains(selected);
 
   @override
   Widget build(BuildContext context) {
-    final selected = widget.selected ?? '';
+    final controller = useTextEditingController(text: selected);
+
+    final selectedValue = selected ?? '';
     // ユーザーの入力によるものではなく、外部要因（プリセット選択やチップタップ等）で
     // 値が変わった場合のみコントローラを同期する。
-    if (_isCustom && _controller.text != selected) {
-      _controller.value = TextEditingValue(
-        text: selected,
-        selection: TextSelection.collapsed(offset: selected.length),
+    if (_isCustom && controller.text != selectedValue) {
+      controller.value = TextEditingValue(
+        text: selectedValue,
+        selection: TextSelection.collapsed(offset: selectedValue.length),
       );
     }
 
@@ -159,26 +142,26 @@ class _ServingMachinePickerState extends State<_ServingMachinePicker> {
             for (final machine in ServingMachine.presetValues)
               ChoiceChip(
                 label: Text(machine),
-                selected: widget.selected == machine,
-                onSelected: (_) => widget.onSelected(machine),
+                selected: selected == machine,
+                onSelected: (_) => onSelected(machine),
               ),
             ChoiceChip(
               label: const Text('その他（自由入力）'),
               selected: _isCustom,
-              onSelected: (_) => widget.onSelected(''),
+              onSelected: (_) => onSelected(''),
             ),
           ],
         ),
         if (_isCustom) ...[
           const SizedBox(height: 8),
           TextField(
-            controller: _controller,
+            controller: controller,
             decoration: const InputDecoration(
               isDense: true,
               border: OutlineInputBorder(),
               hintText: 'サービングマシン名を入力',
             ),
-            onChanged: widget.onSelected,
+            onChanged: onSelected,
           ),
         ],
       ],

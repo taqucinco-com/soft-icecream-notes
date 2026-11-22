@@ -1,0 +1,17 @@
+# 設定画面のニックネーム編集（_SettingsContent, useTextEditingControllerフック使用）を検証する。
+appId: com.taqucinco.soft_icecream_notes.icecream_log
+---
+# 初期状態にする
+- clearState
+# アプリ起動
+- launchApp
+- tapOn: "設定"
+- assertVisible: "ニックネーム"
+- tapOn:
+    below: "ニックネーム"
+- eraseText
+- inputText: "Maestroテスト"
+- assertVisible: "Maestroテスト"
+# TextField外をタップしてonTapOutside経由の保存処理を発火させる
+- tapOn: "アプリバージョン"
+- assertVisible: "Maestroテスト"
