@@ -13,7 +13,7 @@
 | 01_メモ一覧_リスト（2:2） | `ListScreen`（`NotesTabScreen`内） | REQ-3, REQ-5, REQ-8 |
 | 02_メモ一覧_マップ（2:3） | `MapScreen`（`NotesTabScreen`内） | REQ-4, REQ-5, REQ-8 |
 | 03_メモ作成編集（2:4） | `MemoEditScreen`（`StoreCandidatePicker`, サービングマシン選択, `ImpressionListEditor`, 5軸評価入力を内包） | REQ-1, REQ-2, REQ-5, REQ-6, REQ-7, REQ-8 |
-| 04_メモ詳細（2:5） | `MemoDetailScreen`（`TasteRadarChart`を含む） | REQ-6, REQ-7 |
+| 04_メモ詳細（2:5） | `MemoDetailScreen`（`TasteRadarChart`, `MemoLocationMap`を含む） | REQ-6, REQ-7, REQ-10 |
 | 05_設定（2:6） | `SettingsScreen` | REQ-9 |
 
 各フレームへの直接リンクは、上記URLに`?node-id=<node-idのハイフン区切り>`を付与して開く（例: 03は`?node-id=2-4`）。
@@ -178,9 +178,10 @@ Stream<List<Memo>> memoList(Ref ref) {
 - `MemoEditScreen`: 写真取り込み・Exif抽出結果の確認・手動編集（REQ-1, REQ-2, REQ-5）。感想リストの追加・編集・削除（REQ-6）、5軸評価の入力（REQ-7）もここで行う
 - `StoreCandidatePicker`: `MemoEditScreen`のフォーム内にインライン表示する候補チップ群。店舗候補（例: 候補1・候補2）から選択、または「手動で入力」を選ぶと自由入力欄に切り替わる（REQ-2、Figma: 03_メモ作成編集）
 - `ServingMachineFilterBar`: サービングマシンでの絞り込みUI（REQ-5）
-- `MemoDetailScreen`: メモの閲覧専用画面。感想リストの表示（REQ-6）、`TasteRadarChart`による5軸評価の表示（REQ-7）。編集ボタンから`MemoEditScreen`へ遷移する
+- `MemoDetailScreen`: メモの閲覧専用画面。感想リストの表示（REQ-6）、`TasteRadarChart`による5軸評価の表示（REQ-7）、`MemoLocationMap`による店舗位置の表示（REQ-10）。編集ボタンから`MemoEditScreen`へ遷移する
 - `ImpressionListEditor`: 感想を箇条書きで追加・編集・削除するウィジェット（REQ-6）
 - `TasteRadarChart`: 5軸評価を五角形のレーダーチャートとして描画するウィジェット。未評価時は代わりにプレースホルダーを表示する（REQ-7）
+- `MemoLocationMap`: `MemoDetailScreen`内で店舗位置を表示するウィジェット。`memo.latitude`/`longitude`をFutureで非同期に解決し、解決前は1:1アスペクト比のスケルトンを表示する。解決後、位置情報があれば対象メモの店舗位置のみにピンを立てたGoogleMapを表示し、位置情報が無ければ代わりにその旨のメッセージを表示する（REQ-10）
 
 ### application層（Riverpod）
 - `memoListProvider`: フィルタ条件込みでメモ一覧をwatchする
@@ -306,6 +307,7 @@ class TasteRating {
 | REQ-7 (5軸評価・レーダーチャート) | `MemoEditScreen`の評価入力UI → `Memo.tasteRating` → `Memos`テーブルの5列 → `TasteRadarChart`（`MemoDetailScreen`に表示、未評価時はプレースホルダー） |
 | REQ-8 (ナビゲーション構造) | `AppShell` + `go_router`の`StatefulShellRoute`（Notes/Settingsブランチ） + トップレベルモーダルroute（メモ作成） + `NotesTabScreen`内`ViewToggle` |
 | REQ-9 (プロフィール設定) | `SettingsScreen` → `profileProvider` → `SaveProfileUseCase`/`WatchProfileUseCase` → `ProfileRepositoryImpl`（`shared_preferences`） / `appVersionProvider`（`package_info_plus`） |
+| REQ-10 (メモ詳細での店舗位置表示) | `MemoLocationMap`（`google_maps_flutter`）を`MemoDetailScreen`に組み込み。`memo.latitude`/`longitude`をFutureで解決するまで1:1スケルトンを表示し、解決後は対象メモの位置のみピン表示。位置情報が無い場合はプレースホルダーを表示 |
 
 ## 検討したが採用しなかった代替案
 
