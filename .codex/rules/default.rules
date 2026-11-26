@@ -1,0 +1,4 @@
+# プロジェクト固有のコマンド実行ルールを手動で管理する。
+# 同期プラグインが生成する deny.rules と分けて、追加のルールを記述する。
+# 書式: https://learn.chatgpt.com/docs/agent-configuration/rules
+# 複数のルールに一致する場合は forbidden > prompt > allow の順で適用される。
