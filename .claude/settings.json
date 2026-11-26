@@ -16,7 +16,6 @@
       "Read(**/GoogleService-Info.plist)",
       "Read(**/secrets.yaml)",
       "Read(**/secrets.json)",
-
       "Edit(./.env)",
       "Edit(./.env.*)",
       "Edit(**/.env)",
@@ -32,7 +31,6 @@
       "Edit(**/GoogleService-Info.plist)",
       "Edit(**/secrets.yaml)",
       "Edit(**/secrets.json)",
-
       "Write(./.env)",
       "Write(./.env.*)",
       "Write(**/.env)",
@@ -48,12 +46,10 @@
       "Write(**/GoogleService-Info.plist)",
       "Write(**/secrets.yaml)",
       "Write(**/secrets.json)",
-
       "Bash(cat .env*)",
       "Bash(cat **/.env*)",
       "Bash(cat **/key.properties)",
       "Bash(cat **/*.keystore)",
-
       "Bash(rm -rf *)",
       "Bash(rm -fr *)",
       "Bash(git push --force*)",
@@ -65,5 +61,16 @@
       "Bash(sudo *)",
       "Bash(chmod -R 777*)"
     ]
+  },
+  "extraKnownMarketplaces": {
+    "plugin-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "taqucinco-com/plugin-marketplace"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "sync-devin-codex@plugin-marketplace": true
   }
 }

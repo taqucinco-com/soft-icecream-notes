@@ -2,6 +2,41 @@
 
 人間の開発者向けの環境構築・運用手順。AIエージェント向けのルールは [AGENTS.md](./AGENTS.md)（Claude Code固有のものは [CLAUDE.md](./CLAUDE.md)）を参照。
 
+## Claude CodeとCodexのエージェント操作制限
+
+実装役はファイルを変更でき、レビュー・判定役は読み取りだけを行う構成では、Claude CodeとCodexで制御方法が異なる。
+
+| 観点 | Claude Code | Codex |
+|---|---|---|
+| エージェント単位のツール制限 | `.claude/agents/*.md` の `tools` で使用可能なツールを限定できる | `.codex/agents/*.toml` の対応する `features` で機能を無効化できるが、`tools: Read, Grep, Glob` と同じ許可リストではない |
+| レビュー役の書き込み防止 | `Read, Grep, Glob` のみに限定すると、編集・書き込み・シェル実行ツールを渡さずに調査できる | サブエージェントは親の権限を継承する。エージェントのTOMLに `sandbox_mode` や `approval_policy` を指定しても、親の設定を上書きできない |
+| 行動指示の位置付け | ツール制限に加えてレビュー専用の指示を与える | `developer_instructions` の「編集禁止」は行動指示であり、独立した読み取り専用サンドボックスを作るものではない |
+
+この用途では、Claude Codeの方がエージェント単位の制限を直接表現できる。Codexで同等の書き込み防止を求める場合は、読み取り専用の別セッションを用意する必要があり、実行構成が複雑になる。
+
+このリポジトリのCodexエージェントには、読み取り・検索目的の `cat`・`rg`・`rg --files` を許可し、書き込みを禁止する指示を設定する。これはコマンドの技術的な許可リストではない。`apps`・`plugins` 等を一律に無効化すると必要な読み取り機能も失われるため、書き込み禁止の代替にはしない。
+
+### Codexを読み取り専用の別セッションで起動する
+
+リポジトリのルートで、次のコマンドを実行する。
+
+```sh
+codex \
+  -c 'permissions.project.extends=":read-only"' \
+  --ask-for-approval never
+```
+
+`.codex/config.toml` の `default_permissions = "project"` を前提に、`project` プロファイルの継承元だけを起動時に変更する。既存の秘密ファイルに対する `deny` を維持しながら、サンドボックス内のファイル操作を読み取り専用にする。設定ファイル自体は変更しない。`--ask-for-approval never` は権限拡張の承認を求めず、許可されない操作を失敗として扱う。このセッションのサブエージェントも同じ権限を継承する。
+
+ローカルの読み取り専用サンドボックスは、MCP・アプリ経由の外部サービスへの書き込みを禁止するものではない。外部サービスも読み取り専用にする場合は、連携先の権限や公開するツールを別途制限する。
+
+公式ドキュメント:
+
+- [Claude Code: サブエージェントのツール制限](https://code.claude.com/docs/en/sub-agents#restrict-which-tools-a-subagent-can-use)
+- [Codex: サブエージェントの権限継承](https://learn.chatgpt.com/docs/agent-configuration/subagents#approvals-and-sandbox-controls)
+- [Codex: カスタムエージェントの設定可能項目](https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents)
+- [Codex: 設定リファレンス（`default_permissions`・`permissions.<name>.extends`・`approval_policy`）](https://learn.chatgpt.com/docs/config-file/config-reference)
+
 ## 初期設定
 
 ```sh
